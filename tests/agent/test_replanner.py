@@ -60,3 +60,4 @@ async def test_replanner_generates_new_queries_targeting_gaps(mock_llm: MockLLMP
     prior_queries_lower = {q.lower().strip() for q in sample_plan.search_queries}
     for q in new_plan.search_queries:
         assert q.lower().strip() not in prior_queries_lower
+

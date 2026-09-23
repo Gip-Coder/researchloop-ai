@@ -191,3 +191,4 @@ def test_compare_against_curated_benchmark(sample_curated_benchmark: CuratedBenc
     assert report.topic_overlap_score >= 0.75
     assert report.finding_alignment_score > 0.0
     assert "Benchmark Comparison" in report.summary
+

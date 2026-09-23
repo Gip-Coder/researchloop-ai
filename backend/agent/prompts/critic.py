@@ -72,3 +72,4 @@ Provide a rigorous evaluation:
 8. should_replan (boolean: true if gaps require another retrieval cycle)
 9. reason (detailed justification for this assessment)
 """
+

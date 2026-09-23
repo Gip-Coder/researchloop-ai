@@ -27,3 +27,4 @@ __all__ = [
     "BenchmarkComparisonResult",
     "compare_against_benchmark",
 ]
+

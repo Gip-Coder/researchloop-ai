@@ -56,3 +56,4 @@ class AnthropicProvider(LLMProvider):
             response.raise_for_status()
             data = response.json()
             return data["content"][0]["text"]
+

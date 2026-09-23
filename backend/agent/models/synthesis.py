@@ -55,3 +55,4 @@ class Synthesis(BaseModel):
     trends: list[str] = Field(default_factory=list, description="Emerging patterns and research trajectories")
     research_gaps: list[str] = Field(default_factory=list, description="Unexplored questions and open challenges")
     narrative_summary: str = Field(default="", description="Executive narrative synthesis of the state-of-the-art")
+

@@ -70,3 +70,4 @@ class CriticAgent:
             ),
             evaluation_type="heuristic_fallback"
         )
+

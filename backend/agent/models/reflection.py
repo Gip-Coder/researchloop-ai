@@ -49,3 +49,4 @@ class Reflection(BaseModel):
         default="llm_critic",
         description="Marks that this evaluation is LLM-based rather than heuristic"
     )
+

@@ -142,3 +142,4 @@ def compare_against_benchmark(
         finding_alignment_score=round(alignment_score, 3),
         summary=summary
     )
+

@@ -35,3 +35,4 @@ async def test_live_crossref_smoke():
     assert len(results) > 0
     assert results[0].source == "crossref"
     assert results[0].title != ""
+

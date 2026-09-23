@@ -26,3 +26,4 @@ pytest-asyncio>=0.23.0
 # alembic>=1.13.0
 # pydantic-settings>=2.2.0
 # asyncpg>=0.29.0
+

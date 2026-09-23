@@ -130,3 +130,4 @@ def test_metadata_merging_prefers_richest():
     assert m.citation_count == 180000
     assert len(m.authors) == 4
     assert m.venue == "CVPR"
+

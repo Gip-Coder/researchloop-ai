@@ -124,3 +124,4 @@ class CrossrefProvider(AcademicSource):
             categories=raw.get("subject", []),
             raw_source_id=doi
         )
+

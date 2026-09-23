@@ -133,3 +133,4 @@ class Deduplicator:
         merged.categories = list(set(merged.categories + source.categories))
 
         return merged
+

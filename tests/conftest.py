@@ -43,3 +43,4 @@ def mock_llm() -> MockLLMProvider:
 @pytest.fixture
 def mock_academic() -> MockAcademicProvider:
     return MockAcademicProvider()
+

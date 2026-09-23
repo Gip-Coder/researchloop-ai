@@ -54,3 +54,4 @@ async def test_planner_fallback_on_llm_failure():
     assert plan.research_question == question
     assert len(plan.search_queries) > 0
     assert len(plan.sub_questions) > 0
+

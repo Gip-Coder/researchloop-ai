@@ -107,3 +107,4 @@ def test_factory_returns_mock_when_configured():
     config = ResearchConfig(mock_mode=True)
     provider = get_llm_provider(config)
     assert isinstance(provider, MockLLMProvider)
+

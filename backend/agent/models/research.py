@@ -96,3 +96,4 @@ class ResearchResult(BaseModel):
     stop_reason: str | None = Field(default=None, description="Human-readable reason for stopping")
     events: list[AgentEvent] = Field(default_factory=list, description="Chronological trace of agent events")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Execution parameters and metrics")
+

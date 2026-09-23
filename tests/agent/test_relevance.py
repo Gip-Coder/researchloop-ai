@@ -59,3 +59,4 @@ async def test_relevance_filter_date_boundary(mock_llm: MockLLMProvider, sample_
     assert len(relevant) == 0
     assert len(rejected) == 1
     assert "Published in 1995" in rejected[0].relevance_reason
+

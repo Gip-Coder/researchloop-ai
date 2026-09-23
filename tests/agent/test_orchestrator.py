@@ -82,3 +82,4 @@ async def test_orchestrator_diminishing_returns_stop():
 
     assert result.status == "completed"
     assert result.stop_reason == "diminishing_returns_no_new_papers"
+

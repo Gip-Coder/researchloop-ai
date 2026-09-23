@@ -191,3 +191,4 @@ def compute_coherence(synthesis: Synthesis | None) -> float:
     )
 
     return round(min(1.0, max(0.0, total_coherence)), 3)
+

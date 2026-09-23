@@ -164,3 +164,4 @@ async def test_multi_provider_retriever_failure_isolation():
     failed_events = [e for e in events if e.type == "retrieval.failed"]
     assert len(failed_events) == 1
     assert "failing_source" in failed_events[0].message
+

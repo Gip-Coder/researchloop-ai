@@ -45,3 +45,4 @@ async def test_synthesis_with_papers(mock_llm: MockLLMProvider, sample_papers: l
     assert first_analysis.methodology != ""
     assert first_analysis.contribution != ""
     assert len(first_analysis.key_findings) > 0
+

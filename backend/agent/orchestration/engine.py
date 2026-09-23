@@ -316,3 +316,4 @@ class ResearchEngine:
                 "completed_iterations": len(state.iteration_history)
             }
         )
+

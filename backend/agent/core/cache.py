@@ -80,3 +80,4 @@ class QueryCache:
     def clear(self) -> None:
         """Clear memory cache."""
         self._memory_cache.clear()
+

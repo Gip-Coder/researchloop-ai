@@ -31,3 +31,4 @@ class SearchPlan(BaseModel):
     date_range: DateRange | None = Field(default=None, description="Temporal boundaries for paper retrieval")
     inclusion_criteria: list[str] = Field(default_factory=list, description="Criteria for keeping retrieved papers")
     exclusion_criteria: list[str] = Field(default_factory=list, description="Criteria for discarding retrieved papers")
+

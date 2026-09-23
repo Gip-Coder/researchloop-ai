@@ -60,3 +60,4 @@ async def test_critic_evaluation_iteration_2_satisfied(mock_llm: MockLLMProvider
     assert isinstance(reflection, Reflection)
     assert reflection.coverage_score >= 0.85
     assert reflection.should_replan is False
+

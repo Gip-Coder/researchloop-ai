@@ -46,3 +46,4 @@ def get_llm_provider(config: ResearchConfig | None = None) -> LLMProvider:
     else:
         # Fallback to Mock if unrecognized provider
         return MockLLMProvider(model=model_override or "mock-gpt-4o", temperature=temperature)
+

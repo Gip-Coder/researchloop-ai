@@ -97,3 +97,4 @@ class RelevanceFilter:
         relevant = [p for p in evaluated if p.is_relevant]
         rejected = [p for p in evaluated if not p.is_relevant]
         return relevant, rejected
+

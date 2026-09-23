@@ -30,3 +30,4 @@ class Paper(BaseModel):
     is_relevant: bool | None = Field(default=None, description="Whether the paper passed relevance filtering")
     relevance_score: float | None = Field(default=None, description="Relevance score between 0.0 and 1.0")
     relevance_reason: str | None = Field(default=None, description="Rationale for retaining or rejecting paper")
+

@@ -100,3 +100,4 @@ class SynthesisAgent:
             research_gaps=["Further standardized evaluation benchmarks needed."],
             narrative_summary=f"Synthesized {len(papers)} papers addressing {research_question}."
         )
+

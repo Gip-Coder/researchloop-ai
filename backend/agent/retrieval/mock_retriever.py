@@ -156,3 +156,4 @@ class MockAcademicProvider(AcademicSource):
             results = [p.model_copy(deep=True) for p in self.corpus[:2]]
 
         return results
+

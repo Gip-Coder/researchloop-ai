@@ -68,3 +68,4 @@ class GeminiProvider(LLMProvider):
             if not candidates:
                 raise ValueError("No candidates returned from Gemini API.")
             return candidates[0]["content"]["parts"][0]["text"]
+

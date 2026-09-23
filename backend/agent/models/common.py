@@ -53,3 +53,4 @@ class DateRange(BaseModel):
 
     start_year: int | None = Field(default=None, description="Earliest publication year inclusive")
     end_year: int | None = Field(default=None, description="Latest publication year inclusive")
+

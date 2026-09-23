@@ -68,3 +68,4 @@ python -m backend.agent.cli "Your research question" --live --provider openai
 ## Integration Guide for Member 2
 
 Refer directly to [`docs/AGENT_ENGINE_CONTRACT.md`](docs/AGENT_ENGINE_CONTRACT.md) for public interfaces, Pydantic schemas, event streaming details, and error handling specifications.
+

@@ -325,3 +325,4 @@ class MockLLMProvider(LLMProvider):
     def _extract_tag(self, text: str, tag: str) -> str | None:
         match = re.search(rf"<{tag}>([\s\S]*?)</{tag}>", text)
         return match.group(1).strip() if match else None
+

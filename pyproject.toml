@@ -40,3 +40,4 @@ markers = [
     "smoke: Live external API smoke tests (requires network and API keys, opt-in with RUN_LIVE_API_TESTS=1)",
 ]
 addopts = "-ra -q"
+

@@ -85,3 +85,4 @@ def get_settings() -> AgentSettings:
     if _SETTINGS_INSTANCE is None:
         _SETTINGS_INSTANCE = AgentSettings()
     return _SETTINGS_INSTANCE
+

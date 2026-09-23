@@ -94,3 +94,4 @@ class AcademicSource(ABC):
         raise RuntimeError(
             f"[{self.name}] Exhausted all {self.max_retries} attempts. Last error: {last_exception}"
         )
+

@@ -136,3 +136,4 @@ class MultiProviderRetriever:
         serializable = [p.model_dump() for p in papers]
         await self.cache.set("retrieval", cache_key, serializable)
         return papers
+

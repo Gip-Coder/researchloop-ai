@@ -1,0 +1,54 @@
+[
+  {
+    "id": "fixture-1",
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "authors": ["Patrick Lewis", "Ethan Perez", "Aleksandra Piktus"],
+    "abstract": "We explore retrieval-augmented generation architectures for language models.",
+    "year": 2020,
+    "venue": "NeurIPS",
+    "doi": "10.5555/3495724.3496517",
+    "url": "https://arxiv.org/abs/2005.11401",
+    "source": "arxiv",
+    "citation_count": 4800,
+    "categories": ["cs.CL"]
+  },
+  {
+    "id": "fixture-2",
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "authors": ["Vladimir Karpukhin", "Barlas Oguz", "Sewon Min"],
+    "abstract": "Open-domain question answering relying on dual-encoder dense retrieval.",
+    "year": 2020,
+    "venue": "EMNLP",
+    "doi": "10.18653/v1/2020.emnlp-main.550",
+    "url": "https://arxiv.org/abs/2004.04906",
+    "source": "semantic_scholar",
+    "citation_count": 3100,
+    "categories": ["cs.CL"]
+  },
+  {
+    "id": "fixture-dup",
+    "title": "Dense Passage Retrieval for Open-Domain Question Answering",
+    "authors": ["V. Karpukhin", "B. Oguz"],
+    "abstract": "Open-domain QA using dense embeddings.",
+    "year": 2020,
+    "venue": "EMNLP 2020",
+    "doi": "10.18653/v1/2020.emnlp-main.550",
+    "url": "https://doi.org/10.18653/v1/2020.emnlp-main.550",
+    "source": "crossref",
+    "citation_count": 3150,
+    "categories": ["Computer Science"]
+  },
+  {
+    "id": "fixture-irrelevant",
+    "title": "Agricultural Crop Yield Prediction Using Remote Sensing",
+    "authors": ["John Doe", "Jane Smith"],
+    "abstract": "Monitoring corn yield using multispectral drone imagery.",
+    "year": 2021,
+    "venue": "Agronomy Journal",
+    "doi": "10.1000/crop123",
+    "url": "https://doi.org/10.1000/crop123",
+    "source": "crossref",
+    "citation_count": 12,
+    "categories": ["agronomy"]
+  }
+]

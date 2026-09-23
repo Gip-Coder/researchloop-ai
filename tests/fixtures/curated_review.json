@@ -1,0 +1,21 @@
+{
+  "title": "A Survey on Retrieval-Augmented Generation for Large Language Models",
+  "research_question": "How does retrieval augmented generation improve factuality in large language models?",
+  "key_paper_dois_or_titles": [
+    "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "Dense Passage Retrieval for Open-Domain Question Answering",
+    "FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long-form Text Generation",
+    "Benchmarking Large Language Models in Retrieval-Augmented Generation"
+  ],
+  "expected_topics": [
+    "Grounding",
+    "Dense retrieval",
+    "Benchmarking and evaluation",
+    "Hallucination mitigation"
+  ],
+  "ground_truth_findings": [
+    "External document retrieval reduces factual errors compared to closed-book generators",
+    "Retriever precision is critical for minimizing hallucination rates",
+    "Standard accuracy metrics require token-level attribution"
+  ]
+}

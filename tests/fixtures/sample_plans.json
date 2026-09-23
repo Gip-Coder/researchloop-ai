@@ -1,0 +1,33 @@
+{
+  "research_question": "How does retrieval augmented generation improve factuality in large language models?",
+  "sub_questions": [
+    "What architectural paradigms connect neural retrievers to generative models?",
+    "How does external grounding mitigate hallucinations?",
+    "What benchmarks quantify factual precision in RAG systems?"
+  ],
+  "keywords": [
+    "retrieval augmented generation",
+    "RAG",
+    "factuality",
+    "hallucination reduction",
+    "dense retrieval"
+  ],
+  "search_queries": [
+    "retrieval augmented generation factuality large language models",
+    "RAG hallucination reduction knowledge grounding",
+    "evaluating factual consistency RAG"
+  ],
+  "preferred_sources": ["arxiv", "semantic_scholar", "crossref"],
+  "date_range": {
+    "start_year": 2020,
+    "end_year": 2026
+  },
+  "inclusion_criteria": [
+    "Focuses on RAG and LLM factuality",
+    "Presents empirical or theoretical analysis"
+  ],
+  "exclusion_criteria": [
+    "Unrelated domain applications",
+    "Non-scholarly articles"
+  ]
+}

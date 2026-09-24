@@ -9,7 +9,7 @@ from backend.agent.models.research import (
     ResearchState,
     ResearchIteration,
 )
-from backend.agent.models.paper import Paper, PaperRelevance
+from backend.agent.models.paper import Paper
 from backend.agent.models.search import SearchPlan
 from backend.agent.models.synthesis import Synthesis, Theme, PaperAnalysis
 from backend.agent.models.reflection import Reflection
@@ -27,7 +27,6 @@ __all__ = [
     "ResearchState",
     "ResearchIteration",
     "Paper",
-    "PaperRelevance",
     "SearchPlan",
     "Synthesis",
     "Theme",

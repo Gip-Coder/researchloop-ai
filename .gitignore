@@ -21,3 +21,10 @@ build/
 dist/
 *.egg-info/
 
+# SQLite databases
+*.db
+*.sqlite3
+
+# Frontend dependencies
+frontend/node_modules/
+

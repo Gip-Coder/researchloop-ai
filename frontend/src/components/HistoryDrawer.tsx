@@ -24,7 +24,7 @@ export const HistoryDrawer: React.FC<HistoryDrawerProps> = ({
       <div className="drawer-panel" onClick={(e) => e.stopPropagation()}>
         <div className="drawer-header">
           <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Past Research Reviews</h3>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>
+          <button className="btn btn-outline btn-sm" onClick={onClose} aria-label="Close history drawer">
             <X size={16} />
           </button>
         </div>

@@ -28,6 +28,12 @@ For each evaluated paper, output:
 """
 
 
+def _sanitize_untrusted(text: str | None) -> str:
+    if not text:
+        return ""
+    return text.replace("</untrusted_academic_content>", "[/untrusted_academic_content]")
+
+
 def build_relevance_prompt(
     research_question: str,
     inclusion_criteria: list[str],
@@ -40,7 +46,9 @@ def build_relevance_prompt(
 ) -> str:
     inc_text = "\n".join(f"- {c}" for c in inclusion_criteria) if inclusion_criteria else "None specified"
     exc_text = "\n".join(f"- {c}" for c in exclusion_criteria) if exclusion_criteria else "None specified"
-    author_str = ", ".join(authors[:5]) if authors else "Unknown"
+    author_str = _sanitize_untrusted(", ".join(authors[:5]) if authors else "Unknown")
+    safe_title = _sanitize_untrusted(title)
+    safe_abstract = _sanitize_untrusted(abstract) or "No abstract available."
 
     return f"""Evaluate the candidate paper below:
 
@@ -57,11 +65,11 @@ def build_relevance_prompt(
 </exclusion_criteria>
 
 <untrusted_academic_content id="{paper_id}">
-Title: {title}
+Title: {safe_title}
 Authors: {author_str}
 Year: {year or 'Unknown'}
 Abstract:
-{abstract or 'No abstract available.'}
+{safe_abstract}
 </untrusted_academic_content>
 
 Determine:
@@ -69,4 +77,3 @@ Determine:
 2. relevance_score (0.0 to 1.0)
 3. relevance_reason (1-2 sentences explaining why the paper was accepted or rejected)
 """
-

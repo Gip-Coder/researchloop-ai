@@ -43,6 +43,7 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
         <textarea
           className="question-textarea"
           rows={3}
+          aria-label="Research Question"
           placeholder="What would you like to research? (e.g. What are current methods for factuality evaluation in RAG?)"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
@@ -52,8 +53,9 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
         {showConfig && (
           <div className="config-panel">
             <div className="config-item">
-              <label className="config-label">Max Iterations (Loops)</label>
+              <label htmlFor="max-iterations-input" className="config-label">Max Iterations (Loops)</label>
               <input
+                id="max-iterations-input"
                 type="number"
                 min={1}
                 max={5}
@@ -65,8 +67,9 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
             </div>
 
             <div className="config-item">
-              <label className="config-label">Target Coverage Threshold</label>
+              <label htmlFor="target-coverage-input" className="config-label">Target Coverage Threshold</label>
               <input
+                id="target-coverage-input"
                 type="number"
                 step="0.05"
                 min={0.5}
@@ -79,8 +82,9 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
             </div>
 
             <div className="config-item">
-              <label className="config-label">Research Mode</label>
+              <label htmlFor="research-mode-select" className="config-label">Research Mode</label>
               <select
+                id="research-mode-select"
                 className="config-select"
                 value={mockMode ? 'mock' : 'live'}
                 onChange={(e) => setMockMode(e.target.value === 'mock')}

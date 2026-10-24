@@ -52,6 +52,11 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
       });
   }, [papers, searchTerm, sourceFilter, relevanceFilter, sortBy]);
 
+  const isSafeUrl = (url?: string) => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
+
   return (
     <div>
       <div className="papers-toolbar">
@@ -59,6 +64,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           <Search size={16} className="search-input-icon" />
           <input
             type="text"
+            aria-label="Search papers"
             className="search-input-field"
             placeholder="Search papers by keyword, concept, or author..."
             value={searchTerm}
@@ -68,6 +74,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
 
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <select
+            aria-label="Filter by source"
             className="config-select"
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
@@ -79,6 +86,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           </select>
 
           <select
+            aria-label="Filter by relevance"
             className="config-select"
             value={relevanceFilter}
             onChange={(e) => setRelevanceFilter(e.target.value)}
@@ -89,6 +97,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           </select>
 
           <select
+            aria-label="Sort papers"
             className="config-select"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
@@ -159,7 +168,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
                     <ExternalLink size={12} />
                   </a>
                 )}
-                {paper.url && !paper.doi && (
+                {paper.url && !paper.doi && isSafeUrl(paper.url) && (
                   <a
                     href={paper.url}
                     target="_blank"

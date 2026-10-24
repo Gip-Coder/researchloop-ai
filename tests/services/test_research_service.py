@@ -123,3 +123,48 @@ async def test_research_runner_mock_execution(app_db):
         assert evaluation is not None
         assert evaluation["coherence"] > 0.0
         assert evaluation["relevance"] > 0.0
+
+
+@pytest.mark.asyncio
+async def test_research_runner_handles_engine_failure(app_db, monkeypatch):
+    """Regression test: if ResearchEngine returns status='failed', ResearchRunner records error and broadcasts research.failed."""
+    from backend.agent.models.research import ResearchResult
+    from backend.agent.orchestration.engine import ResearchEngine
+    from backend.services.research_runner import register_listener, unregister_listener
+
+    async def _mock_failed_run(self, research_question, config=None):
+        return ResearchResult(
+            session_id="err-session",
+            status="failed",
+            research_question=research_question,
+            stop_reason="error: Simulated unrecoverable failure",
+            coverage_score=0.0,
+        )
+
+    monkeypatch.setattr(ResearchEngine, "run", _mock_failed_run)
+
+    async with app_db() as session:
+        service = ResearchService(session)
+        run = await service.create_research_run(
+            research_question="How does failure recovery work?",
+            config=ResearchConfigInput(mock_mode=True),
+        )
+        run_id = run.id
+
+    queue: asyncio.Queue = asyncio.Queue()
+    register_listener(run_id, queue)
+    try:
+        runner = ResearchRunner(run_id)
+        await runner.execute()
+
+        evt = queue.get_nowait()
+        assert evt["event_type"] == "research.failed"
+        assert evt["status"] == "failed"
+    finally:
+        unregister_listener(run_id, queue)
+
+    async with app_db() as session:
+        service = ResearchService(session)
+        failed_run = await service.get_research_run(run_id)
+        assert failed_run.status == "failed"
+        assert "Simulated unrecoverable failure" in (failed_run.error or "")

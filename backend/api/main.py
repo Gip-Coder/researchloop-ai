@@ -9,7 +9,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -40,13 +40,15 @@ def create_app() -> FastAPI:
     )
     allowed_origins = [o.strip() for o in allowed_origins_raw.split(",") if o.strip()]
     if "*" not in allowed_origins:
-        allowed_origins.append("http://localhost:3000")
-        allowed_origins.append("http://localhost:5173")
+        for default_origin in ("http://localhost:3000", "http://localhost:5173"):
+            if default_origin not in allowed_origins:
+                allowed_origins.append(default_origin)
 
+    is_wildcard = "*" in allowed_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins if "*" not in allowed_origins else ["*"],
-        allow_credentials=True,
+        allow_origins=["*"] if is_wildcard else allowed_origins,
+        allow_credentials=not is_wildcard,
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -62,9 +64,11 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}")
         async def serve_spa(full_path: str):
-            if full_path.startswith("api"):
-                return None
-            target_file = frontend_dist / full_path
+            if full_path == "api" or full_path.startswith("api/"):
+                raise HTTPException(status_code=404, detail="Not Found")
+            target_file = (frontend_dist / full_path).resolve()
+            if not target_file.is_relative_to(frontend_dist.resolve()):
+                raise HTTPException(status_code=404, detail="Not Found")
             if target_file.is_file():
                 return FileResponse(str(target_file))
             return FileResponse(str(frontend_dist / "index.html"))

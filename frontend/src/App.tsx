@@ -112,22 +112,25 @@ export const App: React.FC = () => {
       setThemes(tData);
       setEvents(eData);
 
-      if (run.status === 'completed') {
+      if (run.status === 'completed' || run.status === 'failed') {
         const [resData, evalData] = await Promise.all([
           getResult(runId).catch(() => null),
           getEvaluation(runId).catch(() => null),
         ]);
-        if (resData) setResult(resData);
-        if (evalData) setEvaluation(evalData);
+        setResult(resData);
+        setEvaluation(evalData);
+      } else {
+        setResult(null);
+        setEvaluation(null);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error loading run');
     }
   }, []);
 
-  // Polling & SSE stream for active running run
+  // Polling & SSE stream for active running or pending run
   useEffect(() => {
-    if (!activeRunId || !activeRun || activeRun.status !== 'running') {
+    if (!activeRunId || !activeRun || (activeRun.status !== 'running' && activeRun.status !== 'pending')) {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
       return;
     }
@@ -142,7 +145,14 @@ export const App: React.FC = () => {
             return [...prev, evt as AgentEvent];
           });
         }
-        if (evt.event_type === 'research.completed' || evt.status === 'completed') {
+        if (
+          evt.event_type === 'research.completed' ||
+          evt.event_type === 'research.failed' ||
+          evt.event_type === 'research.cancelled' ||
+          evt.status === 'completed' ||
+          evt.status === 'failed' ||
+          evt.status === 'cancelled'
+        ) {
           loadRunDetails(activeRunId);
           loadRunsList();
         }
@@ -169,7 +179,7 @@ export const App: React.FC = () => {
         setEvents(eData);
         setIterations(itData);
 
-        if (updated.status === 'completed' || updated.status === 'failed') {
+        if (updated.status === 'completed' || updated.status === 'failed' || updated.status === 'cancelled') {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           if (updated.status === 'completed') {
             const [resData, evalData] = await Promise.all([

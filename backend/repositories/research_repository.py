@@ -102,6 +102,7 @@ class ResearchRepository:
         coverage: float,
         stopping_reason: Optional[str],
         completed_at: Optional[datetime] = None,
+        error: Optional[str] = None,
     ) -> Optional[ResearchRunModel]:
         run = await self.session.get(ResearchRunModel, run_id)
         if not run:
@@ -114,6 +115,8 @@ class ResearchRepository:
         run.metadata_json = metadata
         run.coverage = coverage
         run.stopping_reason = stopping_reason
+        if error is not None:
+            run.error = error
         run.completed_at = completed_at or datetime.now(timezone.utc)
         run.updated_at = datetime.now(timezone.utc)
         await self.session.commit()

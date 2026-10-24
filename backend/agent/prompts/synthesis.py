@@ -36,21 +36,31 @@ Synthesis Objectives:
 """
 
 
+def _sanitize_untrusted(text: str | None) -> str:
+    if not text:
+        return ""
+    return text.replace("</untrusted_academic_content>", "[/untrusted_academic_content]")
+
+
 def build_synthesis_prompt(
     research_question: str,
     relevant_papers: list[Paper]
 ) -> str:
     papers_block = []
     for p in relevant_papers:
-        author_str = ", ".join(p.authors[:4]) if p.authors else "Unknown"
+        author_str = _sanitize_untrusted(", ".join(p.authors[:4]) if p.authors else "Unknown")
+        safe_title = _sanitize_untrusted(p.title)
+        safe_venue = _sanitize_untrusted(p.venue) or "N/A"
+        safe_doi = _sanitize_untrusted(p.doi) or "N/A"
+        safe_abstract = _sanitize_untrusted(p.abstract) or "Abstract not provided."
         papers_block.append(
             f"""<untrusted_academic_content id="{p.id}">
-Title: {p.title}
+Title: {safe_title}
 Authors: {author_str} ({p.year or 'N/A'})
-Venue: {p.venue or 'N/A'} | Citations: {p.citation_count or 0}
-DOI: {p.doi or 'N/A'}
+Venue: {safe_venue} | Citations: {p.citation_count or 0}
+DOI: {safe_doi}
 Abstract:
-{p.abstract or 'Abstract not provided.'}
+{safe_abstract}
 </untrusted_academic_content>"""
         )
 
@@ -76,4 +86,3 @@ Produce a complete literature synthesis with:
 8. research_gaps: unanswered questions
 9. narrative_summary: comprehensive executive overview
 """
-

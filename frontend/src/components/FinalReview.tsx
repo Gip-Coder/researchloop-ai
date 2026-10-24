@@ -55,6 +55,11 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
     return md;
   };
 
+  const isSafeUrl = (url?: string) => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(generateMarkdown());
     setCopied(true);
@@ -151,7 +156,7 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
                     https://doi.org/{paper.doi}
                   </a>
                 ) : (
-                  paper.url && (
+                  paper.url && isSafeUrl(paper.url) && (
                     <a
                       href={paper.url}
                       target="_blank"

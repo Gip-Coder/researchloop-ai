@@ -22,7 +22,13 @@ export async function createResearch(
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({ detail: 'Network error' }));
-    throw new Error(errorData.detail || 'Failed to start research run');
+    let message = 'Failed to start research run';
+    if (typeof errorData.detail === 'string') {
+      message = errorData.detail;
+    } else if (Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+      message = errorData.detail.map((d: any) => d.msg || JSON.stringify(d)).join('; ');
+    }
+    throw new Error(message);
   }
   return res.json();
 }

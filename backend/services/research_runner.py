@@ -108,6 +108,7 @@ class ResearchRunner:
     def __init__(self, run_id: str):
         self.run_id = run_id
         self.session_factory = get_session_factory()
+        self._db_lock = asyncio.Lock()
 
     async def execute(self) -> None:
         logger.info(f"Starting execution for research run {self.run_id}")
@@ -147,33 +148,34 @@ class ResearchRunner:
                 "payload": agent_event.metadata,
             }
             try:
-                async with self.session_factory() as evt_session:
-                    evt_repo = EventRepository(evt_session)
-                    model = AgentEventModel(
-                        id=agent_event.id,
-                        run_id=self.run_id,
-                        event_type=agent_event.type,
-                        iteration=agent_event.iteration,
-                        message=agent_event.message,
-                        timestamp=agent_event.timestamp,
-                        payload=agent_event.metadata,
-                    )
-                    await evt_repo.create(model)
+                async with self._db_lock:
+                    async with self.session_factory() as evt_session:
+                        evt_repo = EventRepository(evt_session)
+                        model = AgentEventModel(
+                            id=agent_event.id,
+                            run_id=self.run_id,
+                            event_type=agent_event.type,
+                            iteration=agent_event.iteration,
+                            message=agent_event.message,
+                            timestamp=agent_event.timestamp,
+                            payload=agent_event.metadata,
+                        )
+                        await evt_repo.create(model)
 
-                    # Update current iteration and coverage on the run if available
-                    run_repo_inner = ResearchRepository(evt_session)
-                    cov_update = None
-                    if "coverage_score" in agent_event.metadata:
-                        try:
-                            cov_update = float(agent_event.metadata["coverage_score"])
-                        except (ValueError, TypeError):
-                            pass
-                    await run_repo_inner.update_status(
-                        self.run_id,
-                        status="running",
-                        current_iteration=agent_event.iteration,
-                        coverage=cov_update,
-                    )
+                        # Update current iteration and coverage on the run if available
+                        run_repo_inner = ResearchRepository(evt_session)
+                        cov_update = None
+                        if "coverage_score" in agent_event.metadata:
+                            try:
+                                cov_update = float(agent_event.metadata["coverage_score"])
+                            except (ValueError, TypeError):
+                                pass
+                        await run_repo_inner.update_status(
+                            self.run_id,
+                            status="running",
+                            current_iteration=agent_event.iteration,
+                            coverage=cov_update,
+                        )
             except Exception as e:
                 logger.warning(f"Error persisting AgentEvent: {e}")
 
@@ -184,8 +186,8 @@ class ResearchRunner:
             max_iterations=run_config.get("max_iterations", 3),
             target_coverage=run_config.get("target_coverage", 0.85),
             min_new_relevant_papers=run_config.get("min_new_relevant_papers", 1),
-            llm_provider=run_config.get("llm_provider", "mock" if is_mock else "mock"),
-            llm_model=run_config.get("llm_model"),
+            llm_provider="mock" if is_mock else run_config.get("llm_provider", settings.llm_provider),
+            llm_model=run_config.get("llm_model", settings.llm_model),
             preferred_sources=run_config.get("preferred_sources", ["arxiv", "semantic_scholar", "crossref"]),
             mock_mode=is_mock,
             temperature=run_config.get("temperature", 0.2),
@@ -202,17 +204,19 @@ class ResearchRunner:
             # Persist comprehensive result
             await self._persist_result(result)
 
-            # Broadcast final completion event to listeners
+            # Broadcast final completion or failure event to listeners
+            final_evt_type = "research.completed" if result.status == "completed" else "research.failed"
             broadcast_event(
                 self.run_id,
                 {
-                    "event_type": "research.completed",
-                    "status": "completed",
+                    "event_type": final_evt_type,
+                    "status": result.status,
                     "coverage_score": result.coverage_score,
                     "stop_reason": result.stop_reason,
+                    "error": result.stop_reason if result.status == "failed" else None,
                 },
             )
-            logger.info(f"Research run {self.run_id} completed successfully")
+            logger.info(f"Research run {self.run_id} finished with status={result.status}")
 
         except asyncio.CancelledError:
             logger.info(f"Research run {self.run_id} was cancelled")
@@ -277,7 +281,8 @@ class ResearchRunner:
                     reflection=it.reflection.model_dump() if it.reflection else None,
                     created_at=it.timestamp,
                 )
-                await iteration_repo.create(it_model)
+                session.add(it_model)
+            await session.flush()
 
             # 3. Persist themes
             for theme in result.themes:
@@ -316,7 +321,10 @@ class ResearchRunner:
                 eval_dict["paper_recall"] = comparison.paper_recall
                 eval_dict["benchmark_comparison"] = comparison.model_dump()
 
-            # 5. Save final result on research run record
+            # 5. Save final result on research run record (single atomic commit at the end)
+            err_msg = None
+            if result.status == "failed" and result.stop_reason:
+                err_msg = result.stop_reason.removeprefix("error: ")
             await research_repo.save_final_result(
                 run_id=self.run_id,
                 status=result.status,
@@ -327,4 +335,5 @@ class ResearchRunner:
                 metadata=result.metadata,
                 coverage=result.coverage_score,
                 stopping_reason=result.stop_reason,
+                error=err_msg,
             )

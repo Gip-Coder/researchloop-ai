@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import uuid
 from typing import List, Optional, Tuple, Any
-from sqlalchemy import select, and_, or_, desc, asc
+from sqlalchemy import select, and_, or_, desc, asc, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -128,6 +128,7 @@ class PaperRepository:
                 or_(
                     PaperModel.title.ilike(search_term),
                     PaperModel.abstract.ilike(search_term),
+                    cast(PaperModel.authors, String).ilike(search_term),
                 )
             )
 

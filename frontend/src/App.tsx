@@ -287,7 +287,7 @@ export const App: React.FC = () => {
         )}
 
         {!activeRun ? (
-          <ResearchForm onSubmit={handleStartResearch} isLoading={isSubmitting} llmProvider={llmProvider} />
+          <ResearchForm onSubmit={handleStartResearch} isLoading={isSubmitting} llmProvider={llmProvider} isMockMode={isMockMode} />
         ) : (
           <div>
             <DashboardHeader run={activeRun} onCancel={handleCancelRun} />

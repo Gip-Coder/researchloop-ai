@@ -6,6 +6,7 @@ interface ResearchFormProps {
   onSubmit: (question: string, config: ResearchConfigInput) => void;
   isLoading: boolean;
   llmProvider?: string;
+  isMockMode?: boolean;
 }
 
 const EXAMPLE_QUESTIONS = [
@@ -14,12 +15,21 @@ const EXAMPLE_QUESTIONS = [
   'What are empirical trade-offs between dense passage retrieval and BM25 hybrid ranking?',
 ];
 
-export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading, llmProvider = 'mock' }) => {
+export const ResearchForm: React.FC<ResearchFormProps> = ({
+  onSubmit,
+  isLoading,
+  llmProvider = 'mock',
+  isMockMode = false,
+}) => {
   const [question, setQuestion] = useState('');
   const [showConfig, setShowConfig] = useState(false);
   const [maxIterations, setMaxIterations] = useState(3);
   const [targetCoverage, setTargetCoverage] = useState(0.85);
-  const [mockMode, setMockMode] = useState(true);
+  const [mockMode, setMockMode] = useState(isMockMode);
+
+  React.useEffect(() => {
+    setMockMode(isMockMode);
+  }, [isMockMode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

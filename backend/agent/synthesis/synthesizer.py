@@ -41,9 +41,16 @@ class SynthesisAgent:
                 narrative_summary="No literature available for synthesis."
             )
 
+        # Prioritize top scored relevant papers for high-fidelity synthesis within context limits
+        sorted_papers = sorted(
+            relevant_papers,
+            key=lambda p: (p.relevance_score is not None, p.relevance_score or 0.0),
+            reverse=True
+        )[:10]
+
         prompt = build_synthesis_prompt(
             research_question=research_question,
-            relevant_papers=relevant_papers
+            relevant_papers=sorted_papers
         )
 
         try:

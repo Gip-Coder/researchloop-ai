@@ -25,7 +25,7 @@ describe('ResearchForm Component', () => {
 
   it('submits research question with config', () => {
     const onSubmit = vi.fn();
-    render(<ResearchForm onSubmit={onSubmit} isLoading={false} />);
+    render(<ResearchForm onSubmit={onSubmit} isLoading={false} isMockMode={true} />);
 
     const textarea = screen.getByPlaceholderText(/What would you like to research/i);
     fireEvent.change(textarea, { target: { value: 'How does RAG reduce hallucinations?' } });

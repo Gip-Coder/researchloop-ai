@@ -76,7 +76,7 @@ async def main() -> None:
         "--provider",
         type=str,
         default="mock",
-        help="LLM provider: 'mock', 'openai', 'anthropic', 'gemini' (default: 'mock')"
+        help="LLM provider: 'mock', 'openai', 'anthropic', 'gemini', 'ollama' (default: 'mock')"
     )
     parser.add_argument(
         "--json-output",

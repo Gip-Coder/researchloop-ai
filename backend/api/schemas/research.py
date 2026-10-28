@@ -16,7 +16,7 @@ class ResearchConfigInput(BaseModel):
     target_coverage: float = Field(default=0.85, ge=0.1, le=1.0, description="Target coverage threshold")
     min_new_relevant_papers: int = Field(default=1, ge=0, le=10, description="Min new papers per iteration")
     mock_mode: bool = Field(default=False, description="Run in mock mode using deterministic local fixtures")
-    llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini'")
+    llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini', 'ollama'")
     llm_model: Optional[str] = Field(default=None, description="Optional LLM model override")
     preferred_sources: List[str] = Field(
         default_factory=lambda: ["arxiv", "semantic_scholar", "crossref"],

@@ -11,6 +11,7 @@ from backend.providers.llm.mock import MockLLMProvider
 from backend.providers.llm.openai import OpenAIProvider
 from backend.providers.llm.anthropic import AnthropicProvider
 from backend.providers.llm.gemini import GeminiProvider
+from backend.providers.llm.ollama import OllamaProvider
 
 
 def get_llm_provider(config: ResearchConfig | None = None) -> LLMProvider:
@@ -41,6 +42,8 @@ def get_llm_provider(config: ResearchConfig | None = None) -> LLMProvider:
         return AnthropicProvider(model=model_override, temperature=temperature)
     elif provider_name == "gemini":
         return GeminiProvider(model=model_override, temperature=temperature)
+    elif provider_name == "ollama":
+        return OllamaProvider(model=model_override, temperature=temperature)
     elif provider_name == "mock":
         return MockLLMProvider(model=model_override or "mock-gpt-4o", temperature=temperature)
     else:

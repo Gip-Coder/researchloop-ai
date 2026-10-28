@@ -104,7 +104,7 @@ export async function cancelRun(runId: string): Promise<{ cancelled: boolean }> 
   return res.json();
 }
 
-export async function getHealth(): Promise<{ status: string; mode: string; is_mock_mode: boolean }> {
+export async function getHealth(): Promise<{ status: string; mode: string; is_mock_mode: boolean; llm_provider: string }> {
   const res = await fetch(`${API_BASE}/health`);
   if (!res.ok) throw new Error('Failed to query health');
   return res.json();

@@ -7,6 +7,7 @@ from backend.providers.llm.mock import MockLLMProvider
 from backend.providers.llm.openai import OpenAIProvider
 from backend.providers.llm.anthropic import AnthropicProvider
 from backend.providers.llm.gemini import GeminiProvider
+from backend.providers.llm.ollama import OllamaProvider
 from backend.providers.llm.factory import get_llm_provider
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "OpenAIProvider",
     "AnthropicProvider",
     "GeminiProvider",
+    "OllamaProvider",
     "get_llm_provider",
 ]
 

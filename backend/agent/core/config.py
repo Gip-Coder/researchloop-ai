@@ -21,7 +21,7 @@ class AgentSettings(BaseModel):
         default_factory=lambda: os.getenv("RESEARCHLOOP_MODE", "mock").lower()
     )
 
-    # Active LLM Provider ('mock', 'openai', 'anthropic', 'gemini')
+    # Active LLM Provider ('mock', 'openai', 'anthropic', 'gemini', 'ollama')
     llm_provider: str = Field(
         default_factory=lambda: os.getenv("LLM_PROVIDER", "mock").lower()
     )
@@ -38,6 +38,9 @@ class AgentSettings(BaseModel):
     )
     gemini_api_key: str | None = Field(
         default_factory=lambda: os.getenv("GEMINI_API_KEY", None)
+    )
+    ollama_base_url: str = Field(
+        default_factory=lambda: os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     )
     semantic_scholar_api_key: str | None = Field(
         default_factory=lambda: os.getenv("SEMANTIC_SCHOLAR_API_KEY", None)

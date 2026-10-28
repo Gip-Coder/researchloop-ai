@@ -5,6 +5,7 @@ import { ResearchConfigInput } from '../types';
 interface ResearchFormProps {
   onSubmit: (question: string, config: ResearchConfigInput) => void;
   isLoading: boolean;
+  llmProvider?: string;
 }
 
 const EXAMPLE_QUESTIONS = [
@@ -13,7 +14,7 @@ const EXAMPLE_QUESTIONS = [
   'What are empirical trade-offs between dense passage retrieval and BM25 hybrid ranking?',
 ];
 
-export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading }) => {
+export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading, llmProvider = 'mock' }) => {
   const [question, setQuestion] = useState('');
   const [showConfig, setShowConfig] = useState(false);
   const [maxIterations, setMaxIterations] = useState(3);
@@ -27,7 +28,7 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
       max_iterations: Number(maxIterations),
       target_coverage: Number(targetCoverage),
       mock_mode: mockMode,
-      llm_provider: mockMode ? 'mock' : 'openai',
+      llm_provider: mockMode ? 'mock' : llmProvider,
     });
   };
 
@@ -91,7 +92,7 @@ export const ResearchForm: React.FC<ResearchFormProps> = ({ onSubmit, isLoading 
                 disabled={isLoading}
               >
                 <option value="mock">Mock Mode (Deterministic & Offline)</option>
-                <option value="live">Live Mode (Real APIs)</option>
+                <option value="live">Live Mode ({llmProvider})</option>
               </select>
             </div>
           </div>

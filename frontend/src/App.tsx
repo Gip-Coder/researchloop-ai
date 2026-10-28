@@ -63,6 +63,7 @@ export const App: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isMockMode, setIsMockMode] = useState(true);
+  const [llmProvider, setLlmProvider] = useState('mock');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const pollTimerRef = useRef<any>(null);
@@ -70,7 +71,10 @@ export const App: React.FC = () => {
   // Initial load
   useEffect(() => {
     getHealth()
-      .then((h) => setIsMockMode(h.is_mock_mode))
+      .then((h) => {
+        setIsMockMode(h.is_mock_mode);
+        setLlmProvider(h.llm_provider);
+      })
       .catch(() => {});
 
     loadRunsList();
@@ -283,7 +287,7 @@ export const App: React.FC = () => {
         )}
 
         {!activeRun ? (
-          <ResearchForm onSubmit={handleStartResearch} isLoading={isSubmitting} />
+          <ResearchForm onSubmit={handleStartResearch} isLoading={isSubmitting} llmProvider={llmProvider} />
         ) : (
           <div>
             <DashboardHeader run={activeRun} onCancel={handleCancelRun} />

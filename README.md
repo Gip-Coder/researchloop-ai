@@ -56,8 +56,9 @@ cp .env.example .env
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `RESEARCHLOOP_MODE` | `mock` | `'mock'` (offline deterministic fixtures) or `'live'` (real APIs) |
-| `LLM_PROVIDER` | `mock` | `'mock'`, `'openai'`, `'anthropic'`, or `'gemini'` |
-| `LLM_MODEL` | *(provider default)* | Optional override (`gpt-4o-mini`, `claude-3-5-sonnet-20241022`, `gemini-1.5-flash`) |
+| `LLM_PROVIDER` | `mock` | `'mock'`, `'openai'`, `'anthropic'`, `'gemini'`, or `'ollama'` |
+| `LLM_MODEL` | *(provider default)* | Optional override (e.g. `gpt-4o-mini`, `gemini-3.8-flash`, `llama3.2:3b`) |
+| `OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Local Ollama API URL |
 | `OPENAI_API_KEY` | *(empty)* | Required when `LLM_PROVIDER=openai` |
 | `ANTHROPIC_API_KEY` | *(empty)* | Required when `LLM_PROVIDER=anthropic` |
 | `GEMINI_API_KEY` | *(empty)* | Required when `LLM_PROVIDER=gemini` |
@@ -71,6 +72,14 @@ To run with live providers, set in `.env`:
 RESEARCHLOOP_MODE=live
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your-key-here
+```
+
+For a local Ollama model, install Ollama, pull a model with `ollama pull llama3.2:3b`, then set:
+```ini
+RESEARCHLOOP_MODE=live
+LLM_PROVIDER=ollama
+LLM_MODEL=llama3.2:3b
+OLLAMA_BASE_URL=http://127.0.0.1:11434
 ```
 
 ### 2. Frontend Setup

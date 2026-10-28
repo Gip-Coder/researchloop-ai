@@ -25,7 +25,7 @@ class ResearchConfig(BaseModel):
         default=1,
         description="Minimum new relevant papers needed in an iteration to prevent early stopping"
     )
-    llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini'")
+    llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini', 'ollama'")
     llm_model: str | None = Field(default=None, description="Optional model identifier override")
     preferred_sources: list[str] = Field(
         default_factory=lambda: ["arxiv", "semantic_scholar", "crossref"],

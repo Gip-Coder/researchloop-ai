@@ -94,6 +94,15 @@ class ResearchEngine:
                 except Exception as cb_err:
                     logger.warning(f"Event callback error: {cb_err}")
 
+        async def _emit_event(evt: AgentEvent) -> None:
+            """Adapter for sub-components (e.g. the retriever) that emit fully-formed AgentEvents.
+
+            The retriever reports provider failures as ``AgentEvent`` objects; forwarding them through
+            ``_emit``'s (type, message, metadata) signature preserves provider failure isolation instead
+            of raising a TypeError that would abort the whole research run.
+            """
+            await _emit(evt.type, evt.message, evt.metadata)
+
         await _emit(
             EventType.RESEARCH_STARTED,
             f"Research loop initialized for: '{research_question}'",
@@ -125,7 +134,7 @@ class ResearchEngine:
                 raw_fetched_papers = await retriever.retrieve_for_plan(
                     plan=current_plan,
                     iteration=state.iteration,
-                    event_callback=_emit
+                    event_callback=_emit_event
                 )
                 await _emit(
                     EventType.RETRIEVAL_COMPLETED,
@@ -218,13 +227,24 @@ class ResearchEngine:
                     state.stop_reason = "diminishing_returns_no_new_papers"
                     break
 
-                # Condition C: Critic is satisfied and indicates no replanning needed
+                # Condition C: Stagnant gaps / lack of progress detection
+                # If the critic identifies identical missing topics across iterations with no progress
+                if len(state.iteration_history) >= 2:
+                    prev_it = state.iteration_history[-2]
+                    prev_gaps = set(t.strip().lower() for t in (prev_it.reflection.missing_topics if prev_it.reflection else []))
+                    curr_gaps = set(t.strip().lower() for t in reflection.missing_topics)
+                    if prev_gaps and curr_gaps and prev_gaps == curr_gaps and new_relevant_count == 0:
+                        state.completed = True
+                        state.stop_reason = "stagnant_repeated_gaps"
+                        break
+
+                # Condition D: Critic is satisfied and indicates no replanning needed
                 if not reflection.should_replan:
                     state.completed = True
                     state.stop_reason = "critic_satisfied_coverage"
                     break
 
-                # Condition D: Max iterations reached
+                # Condition E: Max iterations reached
                 if state.iteration >= cfg.max_iterations:
                     state.completed = True
                     state.stop_reason = "max_iterations_reached"

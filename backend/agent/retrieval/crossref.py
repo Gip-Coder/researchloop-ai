@@ -57,7 +57,7 @@ class CrossrefProvider(AcademicSource):
         }
 
         async def _call() -> httpx.Response:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 return await client.get(self.endpoint, params=params, headers=headers)
 
         response = await self._execute_with_retry(_call)

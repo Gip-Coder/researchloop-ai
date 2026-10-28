@@ -31,7 +31,7 @@ class ArxivProvider(AcademicSource):
         max_retries: int = 3
     ):
         super().__init__(name="arxiv", timeout=timeout, max_retries=max_retries)
-        self.endpoint = "http://export.arxiv.org/api/query"
+        self.endpoint = "https://export.arxiv.org/api/query"
 
     async def search(
         self,
@@ -53,7 +53,7 @@ class ArxivProvider(AcademicSource):
         }
 
         async def _call() -> httpx.Response:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=True) as client:
                 return await client.get(self.endpoint, params=params)
 
         response = await self._execute_with_retry(_call)

@@ -44,3 +44,12 @@ def mock_llm() -> MockLLMProvider:
 def mock_academic() -> MockAcademicProvider:
     return MockAcademicProvider()
 
+@pytest.fixture(autouse=True)
+def isolate_test_cache(tmp_path, monkeypatch):
+    """Ensure test runs use a clean isolated cache directory and cannot be poisoned by disk artifacts."""
+    import backend.agent.core.config as config_mod
+    test_cache_dir = str(tmp_path / "test_cache")
+    monkeypatch.setenv("CACHE_DIR", test_cache_dir)
+    if config_mod._SETTINGS_INSTANCE is not None:
+        config_mod._SETTINGS_INSTANCE.cache_dir = test_cache_dir
+

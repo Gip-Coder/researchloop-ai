@@ -1,12 +1,20 @@
 # ResearchLoop AI — Known Issues, Limitations & External Dependencies
 
-**Last Updated:** 2026-10-24
+**Last Updated:** 2026-10-28 (Post-Independent Full-Stack Audit)
 
 All reproducible P0, P1, P2, and P3 defects discovered during the project audit have been resolved and verified with automated regression tests. This document records remaining architectural boundaries, optional external dependencies, and environment-specific considerations.
 
 ---
 
-## 1. External API Credentials (Blocked for Unauthenticated Live LLM Execution)
+## 1. Qualitative Nature of Critic Coverage Estimation
+
+- **Description:** The `coverage_score` reported in the UI and stored in the database represents an LLM agentic evaluation rather than a closed-form deterministic mathematical fraction of all human literature. In mock mode, this progresses from 0.65 to 0.90 to simulate gap closure across iterations.
+- **Impact:** Users must interpret coverage as an estimated sub-question breadth metric rather than an absolute completeness guarantee.
+- **Mitigation:** Fully documented in [METRICS_AND_EVALUATION.md](file:///c:/Users/giphy/Research%20Loop%20AI/researchloop-ai/docs/METRICS_AND_EVALUATION.md) and labeled in UI tooltips as "Assessed sub-question breadth".
+
+---
+
+## 2. External API Credentials (Blocked for Unauthenticated Live LLM Execution)
 
 - **Description:** Running the pipeline in **Live Mode** (`RESEARCHLOOP_MODE=live`) with `LLM_PROVIDER` set to `openai`, `anthropic`, or `gemini` requires a valid API key (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`) configured in `.env`.
 - **Default Behavior:** Out-of-the-box (`RESEARCHLOOP_MODE=mock`), the system runs 100% offline with zero credentials required using deterministic fixtures (`MockLLMProvider` and `MockAcademicProvider`).
@@ -18,7 +26,7 @@ All reproducible P0, P1, P2, and P3 defects discovered during the project audit 
 
 ---
 
-## 2. Single-Process In-Memory Task & SSE State
+## 3. Single-Process In-Memory Task & SSE State
 
 - **Description:** `ResearchRunner` manages active background `asyncio.Task` handles (`_running_tasks`) and Server-Sent Events (SSE) subscriber queues (`_subscribers`) in process memory (`backend/services/research_runner.py`).
 - **Impact:** When running Uvicorn with multiple worker processes (`--workers > 1`), SSE connections or cancellation requests routed to a different worker than the one executing the background task will not see the in-memory queue/task, although all events and state updates are persisted to the database and remain visible via HTTP polling (`GET /api/research/{id}/events`).
@@ -26,7 +34,15 @@ All reproducible P0, P1, P2, and P3 defects discovered during the project audit 
 
 ---
 
-## 3. Database Schema Initialization vs. Alembic Migrations
+## 4. Absence of Authentication Layer
+
+- **Description:** The FastAPI backend does not implement JWT/OAuth2 user sessions or multi-tenant access controls.
+- **Impact:** The application is strictly designed for local developer workstations or private internal research environments.
+- **Mitigation:** Deploy behind an authenticating reverse-proxy (e.g. Nginx with OAuth2-Proxy or Cloudflare Access) if public internet exposure is required.
+
+---
+
+## 5. Database Schema Initialization vs. Alembic Migrations
 
 - **Description:** On startup (`lifespan` in `backend/api/main.py`), `init_db()` automatically creates all database tables via `Base.metadata.create_all` (`backend/database/session.py`). While `alembic` is included in `requirements.txt` for future schema evolution, an `alembic/` migration directory is not currently used because `init_db()` handles clean schema creation automatically for both SQLite and PostgreSQL.
 - **Recommended Action:** If modifying existing column types in an established production PostgreSQL database, initialize Alembic (`alembic init alembic`) to generate incremental DDL migrations.

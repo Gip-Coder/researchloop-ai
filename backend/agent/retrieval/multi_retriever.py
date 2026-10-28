@@ -93,14 +93,18 @@ class MultiProviderRetriever:
                     f"[MultiRetriever] Source '{source_name}' failed for query '{query}': {outcome}"
                 )
                 if event_callback:
-                    await event_callback(
-                        AgentEvent(
-                            type=EventType.RETRIEVAL_FAILED.value,
-                            iteration=iteration,
-                            message=f"Provider '{source_name}' failed: {outcome}",
-                            metadata={"source": source_name, "query": query, "error": str(outcome)}
+                    # Telemetry must never break provider failure isolation.
+                    try:
+                        await event_callback(
+                            AgentEvent(
+                                type=EventType.RETRIEVAL_FAILED.value,
+                                iteration=iteration,
+                                message=f"Provider '{source_name}' failed: {outcome}",
+                                metadata={"source": source_name, "query": query, "error": str(outcome)}
+                            )
                         )
-                    )
+                    except Exception as cb_err:
+                        logger.warning(f"[MultiRetriever] Failure event callback raised: {cb_err}")
             else:
                 all_papers.extend(outcome)
 
@@ -115,6 +119,10 @@ class MultiProviderRetriever:
     ) -> list[Paper]:
         cache_key = {
             "source": provider.name,
+            # Provider implementation is part of the key: mock providers reuse the names
+            # 'arxiv'/'semantic_scholar'/'crossref', so without this, cached fixture papers
+            # could be returned as real results to a live run (and vice versa).
+            "provider_impl": f"{type(provider).__module__}.{type(provider).__qualname__}",
             "query": query,
             "start_year": start_year,
             "end_year": end_year

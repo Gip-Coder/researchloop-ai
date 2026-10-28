@@ -875,6 +875,20 @@ body {
 
 /* Responsive Breakpoints */
 @media (max-width: 768px) {
+  .header-content {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+  .brand-wrapper {
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .brand-badge {
+    display: none;
+  }
+  .header-actions {
+    gap: 0.5rem;
+  }
   .hero-title {
     font-size: 1.75rem;
   }
@@ -884,5 +898,17 @@ body {
   .input-controls {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-actions .btn-sm span {
+    display: none;
+  }
+  .header-actions .btn-sm {
+    padding: 0.4rem;
+  }
+  .brand-name {
+    font-size: 1rem;
   }
 }

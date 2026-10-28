@@ -275,8 +275,8 @@ class MockLLMProvider(LLMProvider):
             "paper_analyses": analyses,
             "themes": themes,
             "agreements": [
-                "Unanimous agreement that retrieval augmentation dramatically outperforms closed-book models on dynamic and long-tail factual queries.",
-                "Consensus that retriever precision is more critical than retriever recall for minimizing hallucination rates."
+                "Broad empirical evidence across studies indicates that retrieval augmentation consistently improves factual accuracy over closed-book models on dynamic and long-tail knowledge tasks.",
+                "Studies converge on the finding that retriever precision is more critical than retriever recall for minimizing generator hallucination rates."
             ],
             "differences": [
                 "Divergence in optimal retrieval granularities: sentence-level vs paragraph-level chunks.",
@@ -298,18 +298,23 @@ class MockLLMProvider(LLMProvider):
                 "Robust resolution of contradictory claims across heterogeneous web sources."
             ],
             "narrative_summary": (
-                "Retrieval-Augmented Generation (RAG) has emerged as the definitive paradigm for suppressing "
+                "Retrieval-Augmented Generation (RAG) has emerged as a leading paradigm for reducing "
                 "parametric hallucinations and enforcing factual grounding in Large Language Models. By decomposing "
                 "knowledge access into non-parametric retrieval and generative reasoning, RAG systems ground outputs "
-                "in verifiable external evidence. The primary frontier lies in handling noise robustness, multi-hop "
-                "reasoning, and nuanced contradiction resolution across retrieved literature."
+                "in verifiable external evidence. Current open frontiers center on noise robustness, multi-hop "
+                "reasoning, and nuanced contradiction resolution when retrieved literature conflicts."
             )
         }
         return model_cls.model_validate(data)
 
     def _mock_relevance(self, prompt: str, model_cls: type[T]) -> T:
         # Determine if paper is on-topic based on prompt content
-        is_off_topic = "quantum biology" in prompt.lower() or "agriculture crop yield" in prompt.lower()
+        prompt_lower = prompt.lower()
+        off_topic_markers = [
+            "quantum biology", "agriculture", "crop yield", "photosynthetic",
+            "algae", "soil chemistry", "marine biology", "nitrogen fixation"
+        ]
+        is_off_topic = any(m in prompt_lower for m in off_topic_markers)
         if is_off_topic:
             return model_cls.model_validate({
                 "is_relevant": False,

@@ -19,7 +19,6 @@ class EventRepository:
     async def create(self, event: AgentEventModel) -> AgentEventModel:
         self.session.add(event)
         await self.session.commit()
-        await self.session.refresh(event)
         return event
 
     async def create_many(self, events: List[AgentEventModel]) -> List[AgentEventModel]:

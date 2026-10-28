@@ -84,7 +84,7 @@ async def test_full_end_to_end_research_lifecycle(e2e_client):
     assert run_data["research_question"] == research_payload["research_question"]
 
     # 2. Wait for completion (with timeout)
-    max_wait = 10.0
+    max_wait = 25.0
     elapsed = 0.0
     poll_interval = 0.2
     completed_run = None

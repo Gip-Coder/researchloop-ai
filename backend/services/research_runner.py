@@ -162,20 +162,21 @@ class ResearchRunner:
                         )
                         await evt_repo.create(model)
 
-                        # Update current iteration and coverage on the run if available
-                        run_repo_inner = ResearchRepository(evt_session)
-                        cov_update = None
-                        if "coverage_score" in agent_event.metadata:
-                            try:
-                                cov_update = float(agent_event.metadata["coverage_score"])
-                            except (ValueError, TypeError):
-                                pass
-                        await run_repo_inner.update_status(
-                            self.run_id,
-                            status="running",
-                            current_iteration=agent_event.iteration,
-                            coverage=cov_update,
-                        )
+                        # Update current iteration and coverage on the run if available (unless terminal)
+                        if agent_event.type not in ("research.completed", "research.failed"):
+                            run_repo_inner = ResearchRepository(evt_session)
+                            cov_update = None
+                            if "coverage_score" in agent_event.metadata:
+                                try:
+                                    cov_update = float(agent_event.metadata["coverage_score"])
+                                except (ValueError, TypeError):
+                                    pass
+                            await run_repo_inner.update_status(
+                                self.run_id,
+                                status="running",
+                                current_iteration=agent_event.iteration,
+                                coverage=cov_update,
+                            )
             except Exception as e:
                 logger.warning(f"Error persisting AgentEvent: {e}")
 
@@ -247,93 +248,94 @@ class ResearchRunner:
 
     async def _persist_result(self, result: ResearchResult) -> None:
         """Persist papers, relations, themes, iterations, and final evaluations in a clean transaction."""
-        async with self.session_factory() as session:
-            paper_repo = PaperRepository(session)
-            iteration_repo = IterationRepository(session)
-            theme_repo = ThemeRepository(session)
-            research_repo = ResearchRepository(session)
+        async with self._db_lock:
+            async with self.session_factory() as session:
+                paper_repo = PaperRepository(session)
+                iteration_repo = IterationRepository(session)
+                theme_repo = ThemeRepository(session)
+                research_repo = ResearchRepository(session)
 
-            # 1. Upsert all papers discovered
-            for paper in result.papers:
-                p_dict = paper.model_dump()
-                await paper_repo.upsert_paper(p_dict)
-                # Link to run
-                await paper_repo.link_run_paper(
+                # 1. Upsert all papers discovered
+                for paper in result.papers:
+                    p_dict = paper.model_dump()
+                    await paper_repo.upsert_paper(p_dict)
+                    # Link to run
+                    await paper_repo.link_run_paper(
+                        run_id=self.run_id,
+                        paper_id=paper.id,
+                        iteration_number=1,  # Default
+                        is_relevant=paper.is_relevant,
+                        relevance_score=paper.relevance_score,
+                        relevance_reason=paper.relevance_reason,
+                    )
+
+                # 2. Persist iterations
+                for it in result.iterations:
+                    it_model = ResearchIterationModel(
+                        run_id=self.run_id,
+                        iteration_number=it.iteration,
+                        search_plan=it.search_plan.model_dump() if it.search_plan else None,
+                        queries=it.queries_executed,
+                        retrieved_count=it.papers_retrieved_count,
+                        new_papers_count=it.new_papers_count,
+                        relevant_count=it.relevant_papers_count,
+                        coverage=it.coverage_score,
+                        reflection=it.reflection.model_dump() if it.reflection else None,
+                        created_at=it.timestamp,
+                    )
+                    session.add(it_model)
+                await session.flush()
+
+                # 3. Persist themes
+                for theme in result.themes:
+                    await theme_repo.save_theme(
+                        run_id=self.run_id,
+                        theme_id=theme.id,
+                        title=theme.title,
+                        description=theme.description,
+                        paper_ids=theme.paper_ids,
+                        key_findings=theme.key_findings,
+                        contradictions_or_tensions=theme.contradictions_or_tensions,
+                    )
+
+                # 4. Compute evaluations
+                coherence = compute_coherence(result.synthesis)
+                avg_relevance = compute_relevance(result.relevant_papers)
+                citation_stats = compute_citation_distribution(result.relevant_papers)
+                coverage = result.coverage_score
+
+                eval_dict: dict[str, Any] = {
+                    "coverage": coverage,
+                    "relevance": avg_relevance,
+                    "coherence": coherence,
+                    "citation_distribution": citation_stats,
+                    "evaluation_type": "intrinsic",
+                    "topic_coverage": None,
+                    "paper_recall": None,
+                    "benchmark_comparison": None,
+                }
+
+                benchmark = _load_curated_benchmark(result.research_question)
+                if benchmark:
+                    comparison = compare_against_benchmark(result, benchmark)
+                    eval_dict["evaluation_type"] = "benchmark"
+                    eval_dict["topic_coverage"] = comparison.topic_overlap_score
+                    eval_dict["paper_recall"] = comparison.paper_recall
+                    eval_dict["benchmark_comparison"] = comparison.model_dump()
+
+                # 5. Save final result on research run record (single atomic commit at the end)
+                err_msg = None
+                if result.status == "failed" and result.stop_reason:
+                    err_msg = result.stop_reason.removeprefix("error: ")
+                await research_repo.save_final_result(
                     run_id=self.run_id,
-                    paper_id=paper.id,
-                    iteration_number=1,  # Default
-                    is_relevant=paper.is_relevant,
-                    relevance_score=paper.relevance_score,
-                    relevance_reason=paper.relevance_reason,
+                    status=result.status,
+                    final_review=result.final_review,
+                    synthesis=result.synthesis.model_dump() if result.synthesis else None,
+                    reflection=result.reflection.model_dump() if result.reflection else None,
+                    evaluation=eval_dict,
+                    metadata=result.metadata,
+                    coverage=result.coverage_score,
+                    stopping_reason=result.stop_reason,
+                    error=err_msg,
                 )
-
-            # 2. Persist iterations
-            for it in result.iterations:
-                it_model = ResearchIterationModel(
-                    run_id=self.run_id,
-                    iteration_number=it.iteration,
-                    search_plan=it.search_plan.model_dump() if it.search_plan else None,
-                    queries=it.queries_executed,
-                    retrieved_count=it.papers_retrieved_count,
-                    new_papers_count=it.new_papers_count,
-                    relevant_count=it.relevant_papers_count,
-                    coverage=it.coverage_score,
-                    reflection=it.reflection.model_dump() if it.reflection else None,
-                    created_at=it.timestamp,
-                )
-                session.add(it_model)
-            await session.flush()
-
-            # 3. Persist themes
-            for theme in result.themes:
-                await theme_repo.save_theme(
-                    run_id=self.run_id,
-                    theme_id=theme.id,
-                    title=theme.title,
-                    description=theme.description,
-                    paper_ids=theme.paper_ids,
-                    key_findings=theme.key_findings,
-                    contradictions_or_tensions=theme.contradictions_or_tensions,
-                )
-
-            # 4. Compute evaluations
-            coherence = compute_coherence(result.synthesis)
-            avg_relevance = compute_relevance(result.relevant_papers)
-            citation_stats = compute_citation_distribution(result.relevant_papers)
-            coverage = result.coverage_score
-
-            eval_dict: dict[str, Any] = {
-                "coverage": coverage,
-                "relevance": avg_relevance,
-                "coherence": coherence,
-                "citation_distribution": citation_stats,
-                "evaluation_type": "intrinsic",
-                "topic_coverage": None,
-                "paper_recall": None,
-                "benchmark_comparison": None,
-            }
-
-            benchmark = _load_curated_benchmark(result.research_question)
-            if benchmark:
-                comparison = compare_against_benchmark(result, benchmark)
-                eval_dict["evaluation_type"] = "benchmark"
-                eval_dict["topic_coverage"] = comparison.topic_overlap_score
-                eval_dict["paper_recall"] = comparison.paper_recall
-                eval_dict["benchmark_comparison"] = comparison.model_dump()
-
-            # 5. Save final result on research run record (single atomic commit at the end)
-            err_msg = None
-            if result.status == "failed" and result.stop_reason:
-                err_msg = result.stop_reason.removeprefix("error: ")
-            await research_repo.save_final_result(
-                run_id=self.run_id,
-                status=result.status,
-                final_review=result.final_review,
-                synthesis=result.synthesis.model_dump() if result.synthesis else None,
-                reflection=result.reflection.model_dump() if result.reflection else None,
-                evaluation=eval_dict,
-                metadata=result.metadata,
-                coverage=result.coverage_score,
-                stopping_reason=result.stop_reason,
-                error=err_msg,
-            )

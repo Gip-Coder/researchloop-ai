@@ -18,7 +18,6 @@ class IterationRepository:
     async def create(self, iteration: ResearchIterationModel) -> ResearchIterationModel:
         self.session.add(iteration)
         await self.session.commit()
-        await self.session.refresh(iteration)
         return iteration
 
     async def get_by_run_id(self, run_id: str) -> List[ResearchIterationModel]:

@@ -13,9 +13,11 @@ Your responsibility is to adjust and refocus the research strategy based on the 
 
 Key Principles:
 1. Do NOT repeat search queries that have already been executed.
-2. Directly convert the Critic's missing topics and weak areas into targeted academic queries.
-3. Refine or broaden inclusion/exclusion criteria if earlier criteria caused important papers to be missed or irrelevant papers to leak through.
-4. Output a revised, actionable SearchPlan for the next iteration.
+2. Directly convert the Critic's missing topics and weak areas into targeted academic search phrases.
+3. Formulate phrase-based queries combining multiword exact phrases enclosed in double quotes with specific gap concepts (e.g., '"retrieval-augmented generation" "hallucination evaluation"', '"dense passage retrieval" noise robustness'). Avoid isolated generic single words.
+4. Refine inclusion/exclusion criteria if needed.
+5. Prioritize modern literature published in 2019 or later.
+6. Output a revised, actionable SearchPlan for the next iteration.
 """
 
 
@@ -55,10 +57,8 @@ Critic Recommended Queries:
 Generate a revised SearchPlan containing:
 1. sub_questions: updated list focusing on the unresolved dimensions
 2. keywords: new academic terminology targeting the missing concepts
-3. search_queries: 4 to 8 brand new search queries distinct from previously executed queries
-4. preferred_sources: ["arxiv", "semantic_scholar", "crossref"]
-5. date_range: adjusted if needed
-6. inclusion_criteria: refined criteria
-7. exclusion_criteria: refined criteria
+3. search_queries: 4 to 8 brand new phrase-based search queries with multiword quotes, targeting the gaps and distinct from previously executed queries
+4. preferred_sources: list of sources (default: ["arxiv", "crossref"])
+5. min_publication_year: 2019
+6. date_range: start_year >= 2019
 """
-

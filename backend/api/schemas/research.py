@@ -5,9 +5,20 @@ Provides clear separation between internal agent schemas and API response contra
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+
+def format_iso_utc(dt: Optional[datetime]) -> Optional[str]:
+    """Ensure consistent ISO 8601 UTC timestamp serialization with explicit 'Z'."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat().replace("+00:00", "Z")
 
 
 class ResearchConfigInput(BaseModel):
@@ -19,10 +30,20 @@ class ResearchConfigInput(BaseModel):
     llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini', 'ollama'")
     llm_model: Optional[str] = Field(default=None, description="Optional LLM model override")
     preferred_sources: List[str] = Field(
-        default_factory=lambda: ["arxiv", "semantic_scholar", "crossref"],
-        description="Target academic repositories"
+        default_factory=lambda: ["arxiv", "crossref"],
+        description="Target academic repositories (default excludes semantic_scholar)"
     )
     temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="LLM temperature")
+
+    # Research Quality & Paper Selection Configs
+    min_publication_year: int = Field(default=2019, description="Minimum publication year")
+    preferred_min_citations: int = Field(default=10, description="Minimum preferred citation count")
+    preferred_max_citations: int = Field(default=15, description="Maximum preferred citation count")
+    strict_citation_filtering: bool = Field(default=False, description="Strictly exclude papers outside citation range")
+    min_synthesis_papers: int = Field(default=6, description="Minimum eligible papers for synthesis")
+    target_synthesis_papers: int = Field(default=8, description="Target eligible papers for synthesis")
+    max_synthesis_papers: int = Field(default=10, description="Maximum eligible papers for synthesis")
+    allow_foundational_exceptions: bool = Field(default=False, description="Allow pre-2019 foundational literature exceptions")
 
 
 class CreateResearchRequest(BaseModel):
@@ -59,6 +80,10 @@ class ResearchRunResponse(BaseModel):
     themes_count: int = 0
     iterations_count: int = 0
 
+    @field_serializer("created_at", "updated_at", "started_at", "completed_at")
+    def serialize_dt(self, dt: Optional[datetime]) -> Optional[str]:
+        return format_iso_utc(dt)
+
 
 class ResearchIterationResponse(BaseModel):
     """Detailed summary of a completed iteration."""
@@ -74,6 +99,10 @@ class ResearchIterationResponse(BaseModel):
     reflection: Optional[dict[str, Any]] = None
     created_at: datetime
 
+    @field_serializer("created_at")
+    def serialize_dt(self, dt: Optional[datetime]) -> Optional[str]:
+        return format_iso_utc(dt)
+
 
 class PaperResponse(BaseModel):
     """Normalized academic paper record."""
@@ -86,7 +115,10 @@ class PaperResponse(BaseModel):
     doi: Optional[str] = None
     url: Optional[str] = None
     source: str
-    citation_count: int = 0
+    citation_count: Optional[int] = None
+    citation_count_available: bool = False
+    matched_queries: List[str] = Field(default_factory=list)
+    is_foundational_exception: bool = False
     publication_date: Optional[str] = None
     categories: List[str] = Field(default_factory=list)
     is_relevant: Optional[bool] = None
@@ -115,6 +147,10 @@ class AgentEventResponse(BaseModel):
     message: str
     timestamp: datetime
     payload: dict[str, Any] = Field(default_factory=dict)
+
+    @field_serializer("timestamp")
+    def serialize_dt(self, dt: Optional[datetime]) -> Optional[str]:
+        return format_iso_utc(dt)
 
 
 class FinalReviewResponse(BaseModel):

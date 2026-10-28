@@ -196,6 +196,9 @@ async def get_papers(
             url=paper.url,
             source=paper.source,
             citation_count=paper.citation_count,
+            citation_count_available=getattr(paper, "citation_count_available", paper.citation_count is not None),
+            matched_queries=getattr(paper, "matched_queries", []) or [],
+            is_foundational_exception=getattr(paper, "is_foundational_exception", False),
             publication_date=paper.publication_date,
             categories=paper.categories or [],
             is_relevant=link.is_relevant,
@@ -392,3 +395,33 @@ async def cancel_research(
         )
     cancelled = await service.cancel_run(run_id)
     return {"run_id": run_id, "cancelled": cancelled}
+
+
+@router.delete(
+    "/{run_id}",
+    summary="Delete a specific research history entry",
+)
+async def delete_research_run(
+    run_id: str,
+    service: ResearchService = Depends(get_research_service),
+):
+    """Permanently delete a research run and its cascade child records."""
+    deleted = await service.delete_research_run(run_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Research run '{run_id}' not found.",
+        )
+    return {"deleted": True, "run_id": run_id}
+
+
+@router.delete(
+    "",
+    summary="Clear all research history runs",
+)
+async def clear_all_research_runs(
+    service: ResearchService = Depends(get_research_service),
+):
+    """Permanently delete all research history runs."""
+    count = await service.clear_all_research_runs()
+    return {"deleted_count": count}

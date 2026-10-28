@@ -21,6 +21,7 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "url": "https://arxiv.org/abs/2005.11401",
         "source": "arxiv",
         "citation_count": 4820,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.AI"]
     },
     {
@@ -32,8 +33,9 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "venue": "EMNLP",
         "doi": "10.18653/v1/2020.emnlp-main.550",
         "url": "https://arxiv.org/abs/2004.04906",
-        "source": "semantic_scholar",
+        "source": "arxiv",
         "citation_count": 3150,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.IR"]
     },
     {
@@ -47,6 +49,7 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "url": "https://arxiv.org/abs/2305.14251",
         "source": "crossref",
         "citation_count": 410,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.AI"]
     },
     {
@@ -59,7 +62,8 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "doi": "10.1609/aaai.v38i16.29728",
         "url": "https://arxiv.org/abs/2309.01431",
         "source": "arxiv",
-        "citation_count": 285,
+        "citation_count": 14,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.AI"]
     },
     {
@@ -71,8 +75,9 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "venue": "ICLR",
         "doi": "10.48550/arXiv.2310.11511",
         "url": "https://arxiv.org/abs/2310.11511",
-        "source": "semantic_scholar",
-        "citation_count": 620,
+        "source": "crossref",
+        "citation_count": 12,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.AI"]
     },
     {
@@ -85,7 +90,8 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "doi": "10.18653/v1/2024.eacl-demo.16",
         "url": "https://arxiv.org/abs/2309.15217",
         "source": "crossref",
-        "citation_count": 390,
+        "citation_count": 11,
+        "citation_count_available": True,
         "categories": ["cs.CL", "cs.IR"]
     },
     {
@@ -97,9 +103,80 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "venue": "SIGIR",
         "doi": "10.1145/3626772.3657834",
         "url": "https://arxiv.org/abs/2401.14887",
-        "source": "semantic_scholar",
-        "citation_count": 140,
+        "source": "arxiv",
+        "citation_count": 10,
+        "citation_count_available": True,
         "categories": ["cs.IR", "cs.CL"]
+    },
+    {
+        "id": "mock-shuster-2021-retrieval",
+        "title": "Retrieval Augmentation Reduces Hallucination in Conversation",
+        "authors": ["Kurt Shuster", "Spencer Poff", "Moya Chen", "Douwe Kiela", "Jason Weston"],
+        "abstract": "We demonstrate that conversational neural agents hallucinate substantially less when grounded in retrieved passages from large external corpora, comparing neural reader-generator variants across multi-turn knowledge dialogues.",
+        "year": 2021,
+        "venue": "EMNLP findings",
+        "doi": "10.18653/v1/2021.findings-emnlp.320",
+        "url": "https://arxiv.org/abs/2104.07567",
+        "source": "arxiv",
+        "citation_count": 15,
+        "citation_count_available": True,
+        "categories": ["cs.CL", "cs.AI"]
+    },
+    {
+        "id": "mock-borgeaud-2022-retro",
+        "title": "Improving Language Models by Retrieving from Trillions of Tokens",
+        "authors": ["Sebastian Borgeaud", "Arthur Mensch", "Jordan Hoffmann", "Trevor Cai", "Eliza Rutherford", "Katie Millican", "George van den Driessche"],
+        "abstract": "We present RETRO (Retrieval-Enhanced Transformer), an autoregressive language model equipped with retrieval over trillions of tokens, showing that retrieval allows 7B parameter models to compete with 280B parameter dense models on factual perplexity.",
+        "year": 2022,
+        "venue": "ICML",
+        "doi": "10.48550/arXiv.2112.04426",
+        "url": "https://arxiv.org/abs/2112.04426",
+        "source": "crossref",
+        "citation_count": 850,
+        "citation_count_available": True,
+        "categories": ["cs.CL", "cs.LG"]
+    },
+    {
+        "id": "mock-guu-2020-realm",
+        "title": "REALM: Retrieval-Augmented Language Model Pre-Training",
+        "authors": ["Kelvin Guu", "Kenton Lee", "Zora Tung", "Panupong Pasupat", "Ming-Wei Chang"],
+        "abstract": "Language model pre-training imparts general knowledge, but models struggle with precise factual recall. We introduce REALM, augmenting pre-training with a learned neural retriever trained end-to-end via masked language modeling.",
+        "year": 2020,
+        "venue": "ICML",
+        "doi": "10.48550/arXiv.2002.08909",
+        "url": "https://arxiv.org/abs/2002.08909",
+        "source": "crossref",
+        "citation_count": 1890,
+        "citation_count_available": True,
+        "categories": ["cs.CL", "cs.AI"]
+    },
+    {
+        "id": "mock-ram-2023-in-context-ralm",
+        "title": "In-Context Retrieval-Augmented Language Models",
+        "authors": ["Ori Ram", "Yoav Levine", "Roi Levin", "Amir Globerson"],
+        "abstract": "We investigate simple in-context retrieval-augmented language models without modifying LM parameters, demonstrating substantial LM perplexity and open-domain factual accuracy improvements across diverse corpora.",
+        "year": 2023,
+        "venue": "TACL",
+        "doi": "10.1162/tacl_a_00605",
+        "url": "https://arxiv.org/abs/2302.00083",
+        "source": "arxiv",
+        "citation_count": None,
+        "citation_count_available": False,
+        "categories": ["cs.CL", "cs.AI"]
+    },
+    {
+        "id": "mock-vaswani-2017-attention",
+        "title": "Attention Is All You Need",
+        "authors": ["Ashish Vaswani", "Noam Shazeer", "Niki Parmar", "Jakob Uszkoreit", "Llion Jones", "Aidan N. Gomez", "Lukasz Kaiser", "Illia Polosukhin"],
+        "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks. We propose the Transformer, based entirely on attention mechanisms.",
+        "year": 2017,
+        "venue": "NeurIPS",
+        "doi": "10.48550/arXiv.1706.03762",
+        "url": "https://arxiv.org/abs/1706.03762",
+        "source": "arxiv",
+        "citation_count": 95000,
+        "citation_count_available": True,
+        "categories": ["cs.CL", "cs.LG"]
     },
     {
         "id": "mock-distractor-quantum-algae",
@@ -112,6 +189,7 @@ MOCK_CORPUS: list[dict[str, Any]] = [
         "url": "https://doi.org/10.1038/nature05678",
         "source": "crossref",
         "citation_count": 95,
+        "citation_count_available": True,
         "categories": ["physics.chem-ph", "q-bio.BM"]
     }
 ]
@@ -153,7 +231,7 @@ class MockAcademicProvider(AcademicSource):
 
         # If empty match, return at least 2 default papers to simulate partial discovery
         if not results and self.corpus:
-            results = [p.model_copy(deep=True) for p in self.corpus[:2]]
+            eligible = [p for p in self.corpus if not (start_year and p.year and p.year < start_year)]
+            results = [p.model_copy(deep=True) for p in eligible[:2]]
 
         return results
-

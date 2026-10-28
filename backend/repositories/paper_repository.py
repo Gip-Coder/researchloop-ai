@@ -30,7 +30,11 @@ class PaperRepository:
             existing.doi = paper_data.get("doi", existing.doi)
             existing.url = paper_data.get("url", existing.url)
             existing.source = paper_data.get("source", existing.source)
-            existing.citation_count = paper_data.get("citation_count", existing.citation_count)
+            if "citation_count" in paper_data:
+                existing.citation_count = paper_data.get("citation_count")
+            existing.citation_count_available = paper_data.get("citation_count_available", existing.citation_count_available)
+            existing.matched_queries = paper_data.get("matched_queries", existing.matched_queries)
+            existing.is_foundational_exception = paper_data.get("is_foundational_exception", existing.is_foundational_exception)
             existing.publication_date = paper_data.get("publication_date", existing.publication_date)
             existing.external_ids = paper_data.get("external_ids", existing.external_ids)
             existing.categories = paper_data.get("categories", existing.categories)
@@ -48,7 +52,10 @@ class PaperRepository:
                 doi=paper_data.get("doi"),
                 url=paper_data.get("url"),
                 source=paper_data.get("source", "unknown"),
-                citation_count=paper_data.get("citation_count", 0),
+                citation_count=paper_data.get("citation_count", None),
+                citation_count_available=paper_data.get("citation_count_available", False),
+                matched_queries=paper_data.get("matched_queries", []),
+                is_foundational_exception=paper_data.get("is_foundational_exception", False),
                 publication_date=paper_data.get("publication_date"),
                 external_ids=paper_data.get("external_ids", {}),
                 categories=paper_data.get("categories", []),
@@ -76,27 +83,25 @@ class PaperRepository:
         res = await self.session.execute(stmt)
         existing = res.scalar_one_or_none()
         if existing:
-            if is_relevant is not None:
-                existing.is_relevant = is_relevant
-            if relevance_score is not None:
-                existing.relevance_score = relevance_score
-            if relevance_reason is not None:
-                existing.relevance_reason = relevance_reason
+            existing.iteration_number = iteration_number
+            existing.is_relevant = is_relevant
+            existing.relevance_score = relevance_score
+            existing.relevance_reason = relevance_reason
             await self.session.flush()
             return existing
-        else:
-            link = ResearchRunPaperModel(
-                id=str(uuid.uuid4()),
-                run_id=run_id,
-                paper_id=paper_id,
-                iteration_number=iteration_number,
-                is_relevant=is_relevant,
-                relevance_score=relevance_score,
-                relevance_reason=relevance_reason,
-            )
-            self.session.add(link)
-            await self.session.flush()
-            return link
+
+        link = ResearchRunPaperModel(
+            id=str(uuid.uuid4()),
+            run_id=run_id,
+            paper_id=paper_id,
+            iteration_number=iteration_number,
+            is_relevant=is_relevant,
+            relevance_score=relevance_score,
+            relevance_reason=relevance_reason,
+        )
+        self.session.add(link)
+        await self.session.flush()
+        return link
 
     async def get_papers_for_run(
         self,
@@ -109,43 +114,37 @@ class PaperRepository:
     ) -> List[Tuple[PaperModel, ResearchRunPaperModel]]:
         stmt = (
             select(PaperModel, ResearchRunPaperModel)
-            .join(ResearchRunPaperModel, ResearchRunPaperModel.paper_id == PaperModel.id)
+            .join(ResearchRunPaperModel, PaperModel.id == ResearchRunPaperModel.paper_id)
             .where(ResearchRunPaperModel.run_id == run_id)
         )
 
+        # Filters
         if is_relevant is not None:
             stmt = stmt.where(ResearchRunPaperModel.is_relevant == is_relevant)
-
         if source:
-            stmt = stmt.where(PaperModel.source.ilike(f"%{source}%"))
-
+            stmt = stmt.where(PaperModel.source == source.lower().strip())
         if min_relevance is not None:
             stmt = stmt.where(ResearchRunPaperModel.relevance_score >= min_relevance)
-
         if search:
-            search_term = f"%{search}%"
+            s_term = f"%{search.strip().lower()}%"
             stmt = stmt.where(
                 or_(
-                    PaperModel.title.ilike(search_term),
-                    PaperModel.abstract.ilike(search_term),
-                    cast(PaperModel.authors, String).ilike(search_term),
+                    PaperModel.title.ilike(s_term),
+                    PaperModel.abstract.ilike(s_term),
+                    cast(PaperModel.authors, String).ilike(s_term),
                 )
             )
 
         # Sorting
-        if sort_by == "relevance":
-            stmt = stmt.order_by(
-                desc(ResearchRunPaperModel.relevance_score).nullslast(),
-                desc(PaperModel.citation_count),
-            )
-        elif sort_by == "citations":
+        if sort_by == "citations":
             stmt = stmt.order_by(desc(PaperModel.citation_count))
         elif sort_by == "year":
-            stmt = stmt.order_by(desc(PaperModel.year).nullslast())
+            stmt = stmt.order_by(desc(PaperModel.year))
         elif sort_by == "title":
             stmt = stmt.order_by(asc(PaperModel.title))
         else:
-            stmt = stmt.order_by(desc(ResearchRunPaperModel.relevance_score).nullslast())
+            # Default: relevance descending
+            stmt = stmt.order_by(desc(ResearchRunPaperModel.relevance_score))
 
         res = await self.session.execute(stmt)
         return list(res.all())

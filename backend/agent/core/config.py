@@ -4,13 +4,38 @@ Configuration management for the research agent engine.
 
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 # Automatically search for .env in current and parent directories
 load_dotenv(override=False)
+
+VALID_ACADEMIC_SOURCES = {"arxiv", "crossref", "semantic_scholar"}
+
+
+def parse_preferred_sources(raw: str | None) -> list[str]:
+    """Parse, normalize, and validate comma-separated preferred sources string."""
+    if not raw:
+        return ["arxiv", "crossref"]
+    cleaned: list[str] = []
+    for item in raw.split(","):
+        s = item.strip().lower()
+        if not s:
+            continue
+        if s in VALID_ACADEMIC_SOURCES:
+            if s not in cleaned:
+                cleaned.append(s)
+        else:
+            logger.warning(
+                f"Unknown academic source '{s}' in PREFERRED_SOURCES ignored. "
+                f"Valid sources: {sorted(list(VALID_ACADEMIC_SOURCES))}"
+            )
+    return cleaned or ["arxiv", "crossref"]
 
 
 class AgentSettings(BaseModel):
@@ -27,6 +52,11 @@ class AgentSettings(BaseModel):
     )
     llm_model: str | None = Field(
         default_factory=lambda: os.getenv("LLM_MODEL", None)
+    )
+
+    # Academic Retrieval Sources (default excludes semantic_scholar)
+    preferred_sources: list[str] = Field(
+        default_factory=lambda: parse_preferred_sources(os.getenv("PREFERRED_SOURCES", "arxiv,crossref"))
     )
 
     # API Keys
@@ -66,6 +96,32 @@ class AgentSettings(BaseModel):
         default_factory=lambda: int(os.getenv("ACADEMIC_MAX_RETRIES", "3"))
     )
 
+    # Research Quality & Paper Selection Hyperparameters
+    default_min_publication_year: int = Field(
+        default_factory=lambda: int(os.getenv("MIN_PUBLICATION_YEAR", "2019"))
+    )
+    default_preferred_min_citations: int = Field(
+        default_factory=lambda: int(os.getenv("PREFERRED_MIN_CITATIONS", "10"))
+    )
+    default_preferred_max_citations: int = Field(
+        default_factory=lambda: int(os.getenv("PREFERRED_MAX_CITATIONS", "15"))
+    )
+    default_strict_citation_filtering: bool = Field(
+        default_factory=lambda: os.getenv("STRICT_CITATION_FILTERING", "false").lower() in ("1", "true", "yes")
+    )
+    default_min_synthesis_papers: int = Field(
+        default_factory=lambda: int(os.getenv("MIN_SYNTHESIS_PAPERS", "6"))
+    )
+    default_target_synthesis_papers: int = Field(
+        default_factory=lambda: int(os.getenv("TARGET_SYNTHESIS_PAPERS", "8"))
+    )
+    default_max_synthesis_papers: int = Field(
+        default_factory=lambda: int(os.getenv("MAX_SYNTHESIS_PAPERS", "10"))
+    )
+    default_allow_foundational_exceptions: bool = Field(
+        default_factory=lambda: os.getenv("ALLOW_FOUNDATIONAL_EXCEPTIONS", "false").lower() in ("1", "true", "yes")
+    )
+
     # Cache Settings
     research_cache_enabled: bool = Field(
         default_factory=lambda: os.getenv("RESEARCH_CACHE_ENABLED", "true").lower() in ("1", "true", "yes")
@@ -82,10 +138,9 @@ class AgentSettings(BaseModel):
 _SETTINGS_INSTANCE: AgentSettings | None = None
 
 
-def get_settings() -> AgentSettings:
+def get_settings(reload: bool = False) -> AgentSettings:
     """Return singleton or freshly loaded settings instance."""
     global _SETTINGS_INSTANCE
-    if _SETTINGS_INSTANCE is None:
+    if _SETTINGS_INSTANCE is None or reload:
         _SETTINGS_INSTANCE = AgentSettings()
     return _SETTINGS_INSTANCE
-

@@ -11,6 +11,7 @@ from typing import TypeVar, Any
 from pydantic import BaseModel
 
 from backend.providers.llm.base import LLMProvider
+from backend.agent.core.config import get_settings
 from backend.agent.models.search import SearchPlan
 from backend.agent.models.synthesis import Synthesis, Theme, PaperAnalysis
 from backend.agent.models.reflection import Reflection
@@ -87,6 +88,8 @@ class MockLLMProvider(LLMProvider):
 
     def _mock_search_plan(self, prompt: str, model_cls: type[T]) -> T:
         is_replanning = "critic_feedback" in prompt or "previously_executed_queries" in prompt
+        settings = get_settings()
+        preferred = list(settings.preferred_sources)
 
         if is_replanning:
             # Replanner output targeting missing benchmarks & evaluation
@@ -106,12 +109,13 @@ class MockLLMProvider(LLMProvider):
                     "cross-encoder reranking"
                 ],
                 "search_queries": [
-                    "retrieval augmented generation hallucination evaluation benchmark",
-                    "measuring factuality in large language models with RAG",
-                    "dense hybrid retrieval RAG accuracy comparison",
-                    "RAG evaluation metrics precision hallucination"
+                    '"retrieval-augmented generation" hallucination evaluation benchmark',
+                    '"measuring factuality" large language models RAG',
+                    '"dense hybrid retrieval" RAG accuracy comparison',
+                    '"RAG evaluation metrics" precision hallucination'
                 ],
-                "preferred_sources": ["arxiv", "semantic_scholar", "crossref"],
+                "preferred_sources": preferred,
+                "min_publication_year": settings.default_min_publication_year,
                 "date_range": {"start_year": 2021, "end_year": 2026},
                 "inclusion_criteria": [
                     "Peer-reviewed or preprint studies with empirical benchmark evaluation",
@@ -143,22 +147,25 @@ class MockLLMProvider(LLMProvider):
                     "knowledge grounding"
                 ],
                 "search_queries": [
-                    "retrieval augmented generation improve factuality large language models",
-                    "RAG knowledge grounding hallucination reduction",
-                    "evaluating factual consistency in retrieval augmented generation",
-                    "dense passage retrieval LLM factuality empirical study",
-                    "noise robustness and failure modes in RAG systems"
+                    '"retrieval-augmented generation" factuality large language models',
+                    '"knowledge grounding" hallucination reduction',
+                    '"evaluating factual consistency" retrieval augmented generation',
+                    '"dense passage retrieval" LLM empirical evaluation',
+                    '"noise robustness" RAG systems failure modes'
                 ],
-                "preferred_sources": ["arxiv", "semantic_scholar", "crossref"],
-                "date_range": {"start_year": 2020, "end_year": 2026},
+                "preferred_sources": preferred,
+                "min_publication_year": settings.default_min_publication_year,
+                "date_range": {"start_year": settings.default_min_publication_year, "end_year": 2026},
                 "inclusion_criteria": [
                     "Focuses directly on retrieval-augmented generation (RAG) and language models",
                     "Investigates factual accuracy, hallucination reduction, or knowledge grounding",
-                    "Presents empirical architecture, benchmark evaluations, or theoretical analysis"
+                    "Presents empirical architecture, benchmark evaluations, or theoretical analysis",
+                    f"Published in {settings.default_min_publication_year} or later"
                 ],
                 "exclusion_criteria": [
                     "Studies solely focused on standalone database retrieval without generative models",
-                    "Non-scholarly blog posts or position pieces lacking empirical basis"
+                    "Non-scholarly blog posts or position pieces lacking empirical basis",
+                    f"Published prior to {settings.default_min_publication_year}"
                 ]
             }
         return model_cls.model_validate(data)
@@ -187,9 +194,9 @@ class MockLLMProvider(LLMProvider):
                     "Early 2020 DPR foundations need pairing with modern 2023-2025 multi-hop RAG studies"
                 ],
                 "recommended_queries": [
-                    "retrieval augmented generation hallucination evaluation benchmark",
-                    "measuring factuality in large language models with RAG",
-                    "dense hybrid retrieval RAG accuracy comparison"
+                    '"retrieval augmented generation" hallucination evaluation benchmark',
+                    '"measuring factuality" large language models RAG',
+                    '"dense hybrid retrieval" RAG accuracy comparison'
                 ],
                 "should_replan": True,
                 "reason": "Foundational RAG concepts and mechanisms are well-covered, but rigorous standardized benchmark evaluation and hybrid architectural comparisons remain under-represented.",
@@ -242,12 +249,17 @@ class MockLLMProvider(LLMProvider):
                 )
             )
 
+        # Distribute paper_ids across thematic clusters
+        half = max(1, len(paper_ids) // 2)
+        theme1_ids = paper_ids[:half] if paper_ids else ["p1", "p2", "p3"]
+        theme2_ids = paper_ids[half:] if paper_ids else ["p4", "p5", "p6"]
+
         themes = [
             Theme(
                 id="theme-1",
                 title="Grounding Generative Outputs in Non-Parametric Memory",
                 description="Core architectural research focusing on coupling pre-trained language models with external vector databases to provide verifiably cited passages.",
-                paper_ids=paper_ids[:3] if paper_ids else ["p1", "p2"],
+                paper_ids=theme1_ids,
                 key_findings=[
                     "Non-parametric grounding significantly lowers hallucinations on knowledge-intensive QA.",
                     "Attribution accuracy improves when passages are reranked prior to generation."
@@ -260,7 +272,7 @@ class MockLLMProvider(LLMProvider):
                 id="theme-2",
                 title="Empirical Benchmarks and Hallucination Quantification",
                 description="Studies developing diagnostic datasets to measure factual precision, knowledge conflicts, and noise sensitivity in RAG systems.",
-                paper_ids=paper_ids[3:] if len(paper_ids) > 3 else paper_ids,
+                paper_ids=theme2_ids,
                 key_findings=[
                     "Standard accuracy metrics mask subtle hallucinations; token-level attribution (FactScore) is required.",
                     "Generators often succumb to primacy bias when multiple retrieved documents disagree."
@@ -298,6 +310,7 @@ class MockLLMProvider(LLMProvider):
                 "Robust resolution of contradictory claims across heterogeneous web sources."
             ],
             "narrative_summary": (
+                f"Synthesized evidence from {len(paper_ids)} eligible peer-reviewed works (2019+). "
                 "Retrieval-Augmented Generation (RAG) has emerged as a leading paradigm for reducing "
                 "parametric hallucinations and enforcing factual grounding in Large Language Models. By decomposing "
                 "knowledge access into non-parametric retrieval and generative reasoning, RAG systems ground outputs "
@@ -330,4 +343,3 @@ class MockLLMProvider(LLMProvider):
     def _extract_tag(self, text: str, tag: str) -> str | None:
         match = re.search(rf"<{tag}>([\s\S]*?)</{tag}>", text)
         return match.group(1).strip() if match else None
-

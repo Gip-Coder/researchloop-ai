@@ -6,12 +6,18 @@ Synthesizes critic reflection into updated, gap-targeted search plans.
 from __future__ import annotations
 
 import logging
+from backend.agent.core.config import get_settings
 from backend.agent.models.search import SearchPlan
 from backend.agent.models.research import ResearchState
 from backend.agent.prompts.replanner import REPLANNER_SYSTEM_PROMPT, build_replanner_prompt
 from backend.providers.llm.base import LLMProvider
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_query_key(q: str) -> str:
+    """Normalize query for deduplication (lowercase, strip extra spaces and quotes)."""
+    return " ".join(q.lower().replace('"', '').split())
 
 
 class ReplanningAgent:
@@ -49,16 +55,24 @@ class ReplanningAgent:
                 system_prompt=REPLANNER_SYSTEM_PROMPT,
                 max_retries=2
             )
-            # Filter out queries that duplicate prior queries
-            existing_set = {q.strip().lower() for q in prior_queries}
-            non_duplicate_queries = [q for q in new_plan.search_queries if q.strip().lower() not in existing_set]
+            existing_normalized = {normalize_query_key(q) for q in prior_queries}
+            non_duplicate_queries = [
+                q for q in new_plan.search_queries
+                if normalize_query_key(q) not in existing_normalized
+            ]
 
             if non_duplicate_queries:
                 new_plan.search_queries = non_duplicate_queries
             elif state.reflection.recommended_queries:
                 new_plan.search_queries = [
-                    q for q in state.reflection.recommended_queries if q.strip().lower() not in existing_set
+                    q for q in state.reflection.recommended_queries
+                    if normalize_query_key(q) not in existing_normalized
                 ] or state.reflection.recommended_queries
+
+            # Ensure preferred sources match active settings
+            settings = get_settings()
+            if not new_plan.preferred_sources:
+                new_plan.preferred_sources = list(settings.preferred_sources)
 
             return new_plan
 
@@ -71,24 +85,36 @@ class ReplanningAgent:
         state: ResearchState,
         prior_queries: list[str]
     ) -> SearchPlan:
+        settings = get_settings()
         reflection = state.reflection
-        existing_set = {q.strip().lower() for q in prior_queries}
+        existing_normalized = {normalize_query_key(q) for q in prior_queries}
 
-        # Build new queries directly from critic's recommendations and missing topics
+        # Words from research question for concise phrase scoping
+        words = [w for w in state.research_question.split() if len(w) > 3]
+        phrase = " ".join(words[:3]) if len(words) >= 3 else state.research_question
+
+        # Build phrase-based queries directly from critic's recommendations and missing topics
         candidate_queries = []
         if reflection:
             for rec in reflection.recommended_queries:
-                if rec.strip().lower() not in existing_set:
-                    candidate_queries.append(rec)
+                clean_rec = rec.strip()
+                if normalize_query_key(clean_rec) not in existing_normalized:
+                    candidate_queries.append(clean_rec)
+
             for miss in reflection.missing_topics:
-                q = f"{state.research_question} {miss}"
-                if q.strip().lower() not in existing_set:
+                # Format as multiword phrase with gap modifier
+                clean_miss = miss.strip().rstrip(".")
+                q = f'"{phrase}" "{clean_miss}"'
+                if normalize_query_key(q) not in existing_normalized:
                     candidate_queries.append(q)
+                q2 = f'"{clean_miss}" empirical evaluation'
+                if normalize_query_key(q2) not in existing_normalized:
+                    candidate_queries.append(q2)
 
         if not candidate_queries:
             candidate_queries = [
-                f"{state.research_question} advanced analysis iteration {state.iteration + 1}",
-                f"{state.research_question} empirical benchmarks"
+                f'"{phrase}" advanced benchmark evaluation',
+                f'"{phrase}" empirical trade-offs and limitations'
             ]
 
         prev = state.search_plan
@@ -97,9 +123,9 @@ class ReplanningAgent:
             sub_questions=reflection.missing_topics if (reflection and reflection.missing_topics) else (prev.sub_questions if prev else []),
             keywords=prev.keywords if prev else [],
             search_queries=candidate_queries[:6],
-            preferred_sources=prev.preferred_sources if prev else ["arxiv", "semantic_scholar", "crossref"],
+            preferred_sources=prev.preferred_sources if prev else list(settings.preferred_sources),
+            min_publication_year=settings.default_min_publication_year,
             date_range=prev.date_range if prev else None,
             inclusion_criteria=prev.inclusion_criteria if prev else [],
             exclusion_criteria=prev.exclusion_criteria if prev else []
         )
-

@@ -20,7 +20,10 @@ class Paper(BaseModel):
     doi: str | None = Field(default=None, description="Digital Object Identifier")
     url: str | None = Field(default=None, description="Canonical or landing URL")
     source: str = Field(description="Originating academic provider (e.g. 'arxiv', 'semantic_scholar', 'crossref')")
-    citation_count: int | None = Field(default=0, description="Estimated citation count if reported")
+    citation_count: int | None = Field(default=None, description="Estimated citation count if reported; None if unknown")
+    citation_count_available: bool = Field(default=False, description="Whether citation count was reported by provider")
+    matched_queries: list[str] = Field(default_factory=list, description="Search queries that retrieved this paper")
+    is_foundational_exception: bool = Field(default=False, description="Whether paper is included as a pre-2019 foundational exception")
     publication_date: str | None = Field(default=None, description="ISO-formatted publication date if known")
     external_ids: dict[str, str] = Field(default_factory=dict, description="Provider-specific IDs (e.g., arxiv, corpusId)")
     categories: list[str] = Field(default_factory=list, description="Subject categories or taxonomy tags")
@@ -30,4 +33,3 @@ class Paper(BaseModel):
     is_relevant: bool | None = Field(default=None, description="Whether the paper passed relevance filtering")
     relevance_score: float | None = Field(default=None, description="Relevance score between 0.0 and 1.0")
     relevance_reason: str | None = Field(default=None, description="Rationale for retaining or rejecting paper")
-

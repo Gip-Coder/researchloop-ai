@@ -8,6 +8,7 @@ import asyncio
 from typing import Sequence
 from pydantic import BaseModel, Field
 
+from backend.agent.core.config import get_settings
 from backend.agent.models.paper import Paper
 from backend.agent.models.search import SearchPlan
 from backend.agent.prompts.relevance import RELEVANCE_SYSTEM_PROMPT, build_relevance_prompt
@@ -40,23 +41,47 @@ class RelevanceFilter:
         Returns (relevant_papers, rejected_papers).
         """
         semaphore = asyncio.Semaphore(max_concurrent)
+        settings = get_settings()
+
+        min_year = plan.min_publication_year if hasattr(plan, "min_publication_year") and plan.min_publication_year else (
+            plan.date_range.start_year if plan.date_range and plan.date_range.start_year else settings.default_min_publication_year
+        )
+        allow_foundational = getattr(plan, "allow_foundational_exceptions", False)
 
         async def _eval_one(paper: Paper) -> Paper:
-            # Check temporal criteria first
-            if plan.date_range and paper.year:
-                if plan.date_range.start_year and paper.year < plan.date_range.start_year:
+            # 1. Temporal validation & publication year constraints
+            if paper.year is None:
+                p = paper.model_copy()
+                p.is_relevant = False
+                p.relevance_score = 0.1
+                p.relevance_reason = (
+                    f"Publication year missing and record cannot be confidently dated; "
+                    f"excluded under {min_year}+ publication year constraint."
+                )
+                return p
+
+            if paper.year < min_year:
+                if allow_foundational and paper.is_foundational_exception:
+                    # Explicit foundational exception permitted
+                    pass
+                else:
                     p = paper.model_copy()
                     p.is_relevant = False
-                    p.relevance_score = 0.1
-                    p.relevance_reason = f"Published in {paper.year}, prior to start_year {plan.date_range.start_year}."
-                    return p
-                if plan.date_range.end_year and paper.year > plan.date_range.end_year:
-                    p = paper.model_copy()
-                    p.is_relevant = False
-                    p.relevance_score = 0.1
-                    p.relevance_reason = f"Published in {paper.year}, after end_year {plan.date_range.end_year}."
+                    p.relevance_score = 0.05
+                    p.relevance_reason = (
+                        f"Published in {paper.year}, prior to start_year {min_year} "
+                        f"(minimum required publication year {min_year})."
+                    )
                     return p
 
+            if plan.date_range and plan.date_range.end_year and paper.year > plan.date_range.end_year:
+                p = paper.model_copy()
+                p.is_relevant = False
+                p.relevance_score = 0.05
+                p.relevance_reason = f"Published in {paper.year}, after end_year {plan.date_range.end_year}."
+                return p
+
+            # 2. LLM Relevance Evaluation
             prompt = build_relevance_prompt(
                 research_question=plan.research_question,
                 inclusion_criteria=plan.inclusion_criteria,
@@ -97,4 +122,3 @@ class RelevanceFilter:
         relevant = [p for p in evaluated if p.is_relevant]
         rejected = [p for p in evaluated if not p.is_relevant]
         return relevant, rejected
-

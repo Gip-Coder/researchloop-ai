@@ -24,6 +24,7 @@ from backend.agent.planner.planner import PlanningAgent
 from backend.agent.retrieval.multi_retriever import MultiProviderRetriever
 from backend.agent.filtering.deduplication import Deduplicator
 from backend.agent.filtering.relevance import RelevanceFilter
+from backend.agent.filtering.ranking import rank_papers_for_synthesis
 from backend.agent.synthesis.synthesizer import SynthesisAgent
 from backend.agent.reflection.critic import CriticAgent
 from backend.agent.replanning.replanner import ReplanningAgent
@@ -95,29 +96,35 @@ class ResearchEngine:
                     logger.warning(f"Event callback error: {cb_err}")
 
         async def _emit_event(evt: AgentEvent) -> None:
-            """Adapter for sub-components (e.g. the retriever) that emit fully-formed AgentEvents.
-
-            The retriever reports provider failures as ``AgentEvent`` objects; forwarding them through
-            ``_emit``'s (type, message, metadata) signature preserves provider failure isolation instead
-            of raising a TypeError that would abort the whole research run.
-            """
+            """Adapter for sub-components (e.g. the retriever) that emit fully-formed AgentEvents."""
             await _emit(evt.type, evt.message, evt.metadata)
 
         await _emit(
             EventType.RESEARCH_STARTED,
             f"Research loop initialized for: '{research_question}'",
-            {"max_iterations": cfg.max_iterations, "target_coverage": cfg.target_coverage}
+            {
+                "max_iterations": cfg.max_iterations,
+                "target_coverage": cfg.target_coverage,
+                "min_synthesis_papers": cfg.min_synthesis_papers,
+                "target_synthesis_papers": cfg.target_synthesis_papers,
+                "preferred_sources": cfg.preferred_sources,
+                "min_publication_year": cfg.min_publication_year
+            }
         )
 
         try:
             # 1. Initial Planning Phase
             await _emit(EventType.PLANNER_STARTED, "Formulating initial search plan...")
             search_plan = await planner.plan(research_question)
+            # Ensure search plan inherits configured sources and temporal constraints
+            search_plan.preferred_sources = [s for s in cfg.preferred_sources if s in search_plan.preferred_sources] or list(cfg.preferred_sources)
+            search_plan.min_publication_year = cfg.min_publication_year
+            search_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
             state.search_plan = search_plan
             await _emit(
                 EventType.PLANNER_COMPLETED,
-                f"Generated search plan with {len(search_plan.search_queries)} queries.",
-                {"query_count": len(search_plan.search_queries), "sub_questions": search_plan.sub_questions}
+                f"Generated search plan with {len(search_plan.search_queries)} queries across {search_plan.preferred_sources}.",
+                {"query_count": len(search_plan.search_queries), "sub_questions": search_plan.sub_questions, "queries": search_plan.search_queries}
             )
 
             # Iterative Loop
@@ -169,13 +176,23 @@ class ResearchEngine:
                     {"total_relevant": len(state.relevant_papers), "new_relevant": new_relevant_count}
                 )
 
-                # 5. Synthesis Phase
+                # 5. Synthesis Phase: Rank papers for synthesis
+                eligible_ranked, _ = rank_papers_for_synthesis(
+                    papers=state.relevant_papers,
+                    preferred_min_citations=cfg.preferred_min_citations,
+                    preferred_max_citations=cfg.preferred_max_citations,
+                    strict_citation_filtering=cfg.strict_citation_filtering,
+                    min_year=cfg.min_publication_year,
+                    allow_foundational=cfg.allow_foundational_exceptions,
+                )
+                synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
+
                 await _emit(
                     EventType.SYNTHESIS_STARTED,
-                    f"Synthesizing {len(state.relevant_papers)} relevant papers into thematic clusters...",
-                    {"paper_count": len(state.relevant_papers)}
+                    f"Synthesizing {len(synthesis_papers)} ranked papers (target: {cfg.min_synthesis_papers}-{cfg.max_synthesis_papers}) into thematic clusters...",
+                    {"paper_count": len(synthesis_papers), "eligible_pool": len(eligible_ranked)}
                 )
-                synthesis = await synthesizer.synthesize(research_question, state.relevant_papers)
+                synthesis = await synthesizer.synthesize(research_question, synthesis_papers)
                 state.synthesis = synthesis
                 state.themes = synthesis.themes
                 await _emit(
@@ -257,6 +274,9 @@ class ResearchEngine:
                     {"missing_topics": reflection.missing_topics}
                 )
                 new_plan = await replanner.replan(state)
+                new_plan.preferred_sources = [s for s in cfg.preferred_sources if s in new_plan.preferred_sources] or list(cfg.preferred_sources)
+                new_plan.min_publication_year = cfg.min_publication_year
+                new_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
                 state.search_plan = new_plan
                 await _emit(
                     EventType.REPLANNING_COMPLETED,
@@ -276,7 +296,7 @@ class ResearchEngine:
                 {"coverage_score": state.coverage_score, "stop_reason": state.stop_reason}
             )
 
-            return self._build_result(state, status="completed")
+            return self._build_result(state, cfg=cfg, status="completed")
 
         except Exception as err:
             logger.exception(f"Fatal error during research execution: {err}")
@@ -287,13 +307,32 @@ class ResearchEngine:
             )
             state.completed = True
             state.stop_reason = f"error: {err}"
-            return self._build_result(state, status="failed")
+            return self._build_result(state, cfg=cfg, status="failed")
 
-    def _build_result(self, state: ResearchState, status: str) -> ResearchResult:
+    def _build_result(self, state: ResearchState, cfg: ResearchConfig, status: str) -> ResearchResult:
         """Construct canonical frozen ResearchResult contract."""
         coherence = compute_coherence(state.synthesis)
         avg_rel = compute_relevance(state.relevant_papers)
         citation_stats = compute_citation_distribution(state.relevant_papers)
+
+        # Rank eligible papers for final bibliography and evidence validation
+        eligible_ranked, _ = rank_papers_for_synthesis(
+            papers=state.relevant_papers,
+            preferred_min_citations=cfg.preferred_min_citations,
+            preferred_max_citations=cfg.preferred_max_citations,
+            strict_citation_filtering=cfg.strict_citation_filtering,
+            min_year=cfg.min_publication_year,
+            allow_foundational=cfg.allow_foundational_exceptions,
+        )
+        synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
+
+        insufficient_evidence = len(eligible_ranked) < cfg.min_synthesis_papers
+        evidence_warning = (
+            f"Evidence target of {cfg.min_synthesis_papers} eligible papers not met: "
+            f"found {len(eligible_ranked)} eligible papers (published {cfg.min_publication_year}+). "
+            f"Synthesizing available {len(synthesis_papers)} papers."
+            if insufficient_evidence else None
+        )
 
         final_review = {
             "title": f"Literature Review: {state.research_question}",
@@ -303,14 +342,39 @@ class ResearchEngine:
                     "title": t.title,
                     "description": t.description,
                     "paper_count": len(t.paper_ids),
-                    "key_findings": t.key_findings
+                    "key_findings": t.key_findings,
+                    "paper_ids": t.paper_ids
                 }
                 for t in (state.themes or [])
             ],
             "consensus_findings": state.synthesis.agreements if state.synthesis else [],
             "open_research_gaps": state.synthesis.research_gaps if state.synthesis else [],
             "coherence_score": coherence,
-            "relevance_score": avg_rel
+            "relevance_score": avg_rel,
+            "evidence_target_met": not insufficient_evidence,
+            "eligible_papers_count": len(eligible_ranked),
+            "synthesis_papers_count": len(synthesis_papers),
+            "min_synthesis_papers": cfg.min_synthesis_papers,
+            "target_synthesis_papers": cfg.target_synthesis_papers,
+            "max_synthesis_papers": cfg.max_synthesis_papers,
+            "insufficient_evidence_warning": evidence_warning,
+            "bibliography": [
+                {
+                    "id": p.id,
+                    "title": p.title,
+                    "authors": p.authors,
+                    "year": p.year,
+                    "venue": p.venue,
+                    "citation_count": p.citation_count,
+                    "citation_count_available": p.citation_count_available,
+                    "doi": p.doi,
+                    "url": p.url,
+                    "source": p.source,
+                    "is_foundational_exception": p.is_foundational_exception,
+                    "matched_queries": p.matched_queries
+                }
+                for p in synthesis_papers
+            ]
         }
 
         return ResearchResult(
@@ -332,8 +396,10 @@ class ResearchEngine:
                 "average_relevance": avg_rel,
                 "total_papers_retrieved": len(state.papers),
                 "relevant_papers_retained": len(state.relevant_papers),
+                "eligible_synthesis_papers": len(eligible_ranked),
+                "synthesis_papers_used": len(synthesis_papers),
                 "citation_metrics": citation_stats,
-                "completed_iterations": len(state.iteration_history)
+                "completed_iterations": len(state.iteration_history),
+                "insufficient_evidence_warning": evidence_warning
             }
         )
-

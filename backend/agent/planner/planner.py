@@ -6,6 +6,8 @@ Deconstructs complex research questions into structured search plans.
 from __future__ import annotations
 
 import logging
+from backend.agent.core.config import get_settings
+from backend.agent.models.common import DateRange
 from backend.agent.models.search import SearchPlan
 from backend.agent.prompts.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt
 from backend.providers.llm.base import LLMProvider
@@ -33,6 +35,10 @@ class PlanningAgent:
                 system_prompt=PLANNER_SYSTEM_PROMPT,
                 max_retries=2
             )
+            # Ensure preferred_sources respects configured defaults if omitted or empty
+            settings = get_settings()
+            if not plan.preferred_sources:
+                plan.preferred_sources = list(settings.preferred_sources)
             return plan
 
         except Exception as err:
@@ -40,15 +46,18 @@ class PlanningAgent:
             return self._build_fallback_plan(research_question)
 
     def _build_fallback_plan(self, research_question: str) -> SearchPlan:
-        """Generate a deterministic fallback search plan if LLM fails completely."""
+        """Generate a deterministic fallback search plan with phrase-based queries."""
+        settings = get_settings()
         words = [w for w in research_question.split() if len(w) > 3]
         primary_keywords = words[:6]
+        phrase = " ".join(words[:3]) if len(words) >= 3 else research_question
 
+        # Construct meaningful academic phrases combining quoted concepts with modifiers
         queries = [
-            research_question,
-            f"{' '.join(primary_keywords[:3])} empirical study",
-            f"{' '.join(primary_keywords[:3])} architecture evaluation",
-            f"{' '.join(primary_keywords[:3])} state of the art survey"
+            f'"{phrase}" empirical evaluation',
+            f'"{phrase}" benchmark factuality',
+            f'"{phrase}" architectural analysis',
+            f'"{phrase}" state of the art survey',
         ]
 
         return SearchPlan(
@@ -60,14 +69,17 @@ class PlanningAgent:
             ],
             keywords=primary_keywords,
             search_queries=queries,
-            preferred_sources=["arxiv", "semantic_scholar", "crossref"],
+            preferred_sources=list(settings.preferred_sources),
+            min_publication_year=settings.default_min_publication_year,
+            date_range=DateRange(start_year=settings.default_min_publication_year),
             inclusion_criteria=[
                 "Directly investigates the core research question",
-                "Presents empirical or theoretical methodologies"
+                "Presents empirical or theoretical methodologies",
+                f"Published in {settings.default_min_publication_year} or later"
             ],
             exclusion_criteria=[
                 "Non-scholarly or superficial opinion articles",
-                "Completely unrelated domain applications"
+                "Completely unrelated domain applications",
+                f"Published prior to {settings.default_min_publication_year} unless foundational"
             ]
         )
-

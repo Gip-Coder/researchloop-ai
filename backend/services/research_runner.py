@@ -189,9 +189,17 @@ class ResearchRunner:
             min_new_relevant_papers=run_config.get("min_new_relevant_papers", 1),
             llm_provider="mock" if is_mock else run_config.get("llm_provider", settings.llm_provider),
             llm_model=run_config.get("llm_model", settings.llm_model),
-            preferred_sources=run_config.get("preferred_sources", ["arxiv", "semantic_scholar", "crossref"]),
+            preferred_sources=run_config.get("preferred_sources", list(settings.preferred_sources)),
             mock_mode=is_mock,
             temperature=run_config.get("temperature", 0.2),
+            min_publication_year=run_config.get("min_publication_year", settings.default_min_publication_year),
+            preferred_min_citations=run_config.get("preferred_min_citations", settings.default_preferred_min_citations),
+            preferred_max_citations=run_config.get("preferred_max_citations", settings.default_preferred_max_citations),
+            strict_citation_filtering=run_config.get("strict_citation_filtering", settings.default_strict_citation_filtering),
+            min_synthesis_papers=run_config.get("min_synthesis_papers", settings.default_min_synthesis_papers),
+            target_synthesis_papers=run_config.get("target_synthesis_papers", settings.default_target_synthesis_papers),
+            max_synthesis_papers=run_config.get("max_synthesis_papers", settings.default_max_synthesis_papers),
+            allow_foundational_exceptions=run_config.get("allow_foundational_exceptions", settings.default_allow_foundational_exceptions),
             event_callback=_event_callback,
         )
 

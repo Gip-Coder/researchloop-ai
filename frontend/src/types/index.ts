@@ -9,6 +9,14 @@ export interface ResearchConfigInput {
   llm_model?: string;
   preferred_sources?: string[];
   temperature?: number;
+  min_publication_year?: number;
+  preferred_min_citations?: number;
+  preferred_max_citations?: number;
+  strict_citation_filtering?: boolean;
+  min_synthesis_papers?: number;
+  target_synthesis_papers?: number;
+  max_synthesis_papers?: number;
+  allow_foundational_exceptions?: boolean;
 }
 
 export interface ResearchRun {
@@ -40,6 +48,7 @@ export interface ResearchIteration {
     keywords?: string[];
     search_queries?: string[];
     preferred_sources?: string[];
+    min_publication_year?: number;
     inclusion_criteria?: string[];
     exclusion_criteria?: string[];
   };
@@ -73,7 +82,10 @@ export interface Paper {
   doi?: string;
   url?: string;
   source: string;
-  citation_count: number;
+  citation_count: number | null;
+  citation_count_available?: boolean;
+  matched_queries?: string[];
+  is_foundational_exception?: boolean;
   publication_date?: string;
   categories: string[];
   is_relevant?: boolean;
@@ -116,6 +128,27 @@ export interface FinalReview {
   open_research_gaps: string[];
   coherence_score: number;
   relevance_score: number;
+  evidence_target_met?: boolean;
+  eligible_papers_count?: number;
+  synthesis_papers_count?: number;
+  min_synthesis_papers?: number;
+  target_synthesis_papers?: number;
+  max_synthesis_papers?: number;
+  insufficient_evidence_warning?: string | null;
+  bibliography?: Array<{
+    id: string;
+    title: string;
+    authors?: string[];
+    year?: number;
+    venue?: string;
+    citation_count?: number | null;
+    citation_count_available?: boolean;
+    doi?: string;
+    url?: string;
+    source: string;
+    is_foundational_exception?: boolean;
+    matched_queries?: string[];
+  }>;
 }
 
 export interface ResearchResultData {
@@ -171,6 +204,8 @@ export interface EvaluationData {
     median_citations?: number;
     max_citations?: number;
     papers_with_citation_data?: number;
+    papers_missing_citation_data?: number;
+    in_preferred_range_count?: number;
   };
   topic_coverage?: number;
   paper_recall?: number;

@@ -66,12 +66,17 @@ class CrossrefProvider(AcademicSource):
 
         papers: list[Paper] = []
         for item in items:
-            normalized = self._normalize_paper(item)
+            normalized = self._normalize_paper(item, start_year=start_year, end_year=end_year)
             if normalized:
                 papers.append(normalized)
         return papers
 
-    def _normalize_paper(self, raw: dict[str, Any]) -> Paper | None:
+    def _normalize_paper(
+        self,
+        raw: dict[str, Any],
+        start_year: int | None = None,
+        end_year: int | None = None
+    ) -> Paper | None:
         titles = raw.get("title", [])
         title = titles[0].strip() if titles else ""
         if not title:
@@ -93,13 +98,13 @@ class CrossrefProvider(AcademicSource):
             clean_abstract = re.sub(r"<[^>]+>", " ", raw_abstract)
             clean_abstract = re.sub(r"\s+", " ", clean_abstract).strip()
 
-        # Year
-        year = None
-        published = raw.get("published") or raw.get("published-print") or raw.get("published-online")
-        if published and "date-parts" in published:
-            parts = published["date-parts"]
-            if parts and parts[0] and isinstance(parts[0][0], int):
-                year = parts[0][0]
+        # Authoritative publication year & date normalization
+        year, pub_date = self._extract_year_and_date(raw)
+
+        if start_year and year and year < start_year:
+            return None
+        if end_year and year and year > end_year:
+            return None
 
         # Venue / Container Title
         container = raw.get("container-title", [])
@@ -107,7 +112,14 @@ class CrossrefProvider(AcademicSource):
 
         doi = raw.get("DOI")
         url = raw.get("URL") or (f"https://doi.org/{doi}" if doi else None)
-        citation_count = raw.get("is-referenced-by-count") or 0
+
+        # Crossref citation count: is-referenced-by-count
+        ref_count = raw.get("is-referenced-by-count")
+        citation_count: int | None = None
+        citation_count_available: bool = False
+        if ref_count is not None and isinstance(ref_count, (int, float)):
+            citation_count = int(ref_count)
+            citation_count_available = True
 
         return Paper(
             id=f"crossref-{doi.replace('/', '_')}" if doi else f"crossref-{abs(hash(title))}",
@@ -120,8 +132,38 @@ class CrossrefProvider(AcademicSource):
             url=url,
             source="crossref",
             citation_count=citation_count,
+            citation_count_available=citation_count_available,
+            publication_date=pub_date,
             external_ids={"doi": doi} if doi else {},
             categories=raw.get("subject", []),
             raw_source_id=doi
         )
 
+    def _extract_year_and_date(self, raw: dict[str, Any]) -> tuple[int | None, str | None]:
+        """
+        Normalize publication year and date across print, online, and issued date-parts.
+        Prefers formal issued date, with fallback to earliest verified publication date.
+        """
+        date_candidates: list[tuple[int, str, str]] = []
+        for field in ("issued", "published-print", "published-online", "published", "created"):
+            obj = raw.get(field)
+            if obj and isinstance(obj, dict) and "date-parts" in obj:
+                parts = obj.get("date-parts", [])
+                if parts and parts[0] and isinstance(parts[0][0], int):
+                    y = parts[0][0]
+                    m = parts[0][1] if len(parts[0]) > 1 and isinstance(parts[0][1], int) else 1
+                    d = parts[0][2] if len(parts[0]) > 2 and isinstance(parts[0][2], int) else 1
+                    date_str = f"{y:04d}-{m:02d}-{d:02d}"
+                    date_candidates.append((y, date_str, field))
+
+        if not date_candidates:
+            return None, None
+
+        # If issued exists, it is the canonical bibliographic record
+        for y, d_str, fld in date_candidates:
+            if fld == "issued":
+                return y, d_str
+
+        # Otherwise take the earliest publication date
+        date_candidates.sort(key=lambda c: c[0])
+        return date_candidates[0][0], date_candidates[0][1]

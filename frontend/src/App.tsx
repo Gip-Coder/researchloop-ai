@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   cancelRun,
   createResearch,
+  deleteResearchRun,
+  clearAllResearchRuns,
   getEvaluation,
   getEvents,
   getHealth,
@@ -166,7 +168,7 @@ export const App: React.FC = () => {
       }
     );
 
-    // Reliable background polling
+    // Reliable background polling (less aggressive to prevent scroll / render fighting)
     pollTimerRef.current = setInterval(async () => {
       try {
         const updated = await getResearchRun(activeRunId);
@@ -200,7 +202,7 @@ export const App: React.FC = () => {
       } catch (e) {
         console.error('Polling error', e);
       }
-    }, 1500);
+    }, 2500);
 
     return () => {
       unsubscribe();
@@ -260,6 +262,20 @@ export const App: React.FC = () => {
     const url = new URL(window.location.href);
     url.searchParams.set('run', runId);
     window.history.pushState({}, '', url.toString());
+  };
+
+  const handleDeleteRun = async (runId: string) => {
+    await deleteResearchRun(runId);
+    if (activeRunId === runId) {
+      handleNewResearch();
+    }
+    await loadRunsList();
+  };
+
+  const handleClearAllRuns = async () => {
+    await clearAllResearchRuns();
+    handleNewResearch();
+    setRuns([]);
   };
 
   return (
@@ -379,6 +395,8 @@ export const App: React.FC = () => {
         runs={runs}
         activeRunId={activeRunId || undefined}
         onSelectRun={handleSelectPastRun}
+        onDeleteRun={handleDeleteRun}
+        onClearAll={handleClearAllRuns}
       />
     </div>
   );

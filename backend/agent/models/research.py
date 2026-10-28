@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Awaitable
 from pydantic import BaseModel, Field
 
+from backend.agent.core.config import get_settings
 from backend.agent.models.common import AgentEvent
 from backend.agent.models.paper import Paper
 from backend.agent.models.search import SearchPlan
@@ -28,14 +29,49 @@ class ResearchConfig(BaseModel):
     llm_provider: str = Field(default="mock", description="LLM provider: 'mock', 'openai', 'anthropic', 'gemini', 'ollama'")
     llm_model: str | None = Field(default=None, description="Optional model identifier override")
     preferred_sources: list[str] = Field(
-        default_factory=lambda: ["arxiv", "semantic_scholar", "crossref"],
-        description="Academic sources to query"
+        default_factory=lambda: list(get_settings().preferred_sources),
+        description="Academic sources to query (default: arxiv, crossref)"
     )
     mock_mode: bool = Field(default=False, description="Enforce full mock mode without external network calls")
     temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="LLM sampling temperature")
     academic_request_timeout: float = Field(default=15.0, description="Timeout in seconds for academic API queries")
     academic_max_retries: int = Field(default=3, description="Max retries with exponential backoff on provider failures")
     cache_enabled: bool = Field(default=True, description="Enable query and LLM result caching")
+
+    # Research Quality & Paper Selection Hyperparameters
+    min_publication_year: int = Field(
+        default_factory=lambda: get_settings().default_min_publication_year,
+        description="Minimum publication year for eligible literature"
+    )
+    preferred_min_citations: int = Field(
+        default_factory=lambda: get_settings().default_preferred_min_citations,
+        description="Lower bound of preferred citation count range"
+    )
+    preferred_max_citations: int = Field(
+        default_factory=lambda: get_settings().default_preferred_max_citations,
+        description="Upper bound of preferred citation count range"
+    )
+    strict_citation_filtering: bool = Field(
+        default_factory=lambda: get_settings().default_strict_citation_filtering,
+        description="Strictly exclude papers outside citation range if True; preference-based if False"
+    )
+    min_synthesis_papers: int = Field(
+        default_factory=lambda: get_settings().default_min_synthesis_papers,
+        description="Minimum number of unique eligible papers for thematic synthesis"
+    )
+    target_synthesis_papers: int = Field(
+        default_factory=lambda: get_settings().default_target_synthesis_papers,
+        description="Target number of unique eligible papers for thematic synthesis"
+    )
+    max_synthesis_papers: int = Field(
+        default_factory=lambda: get_settings().default_max_synthesis_papers,
+        description="Maximum number of unique eligible papers to include in synthesis prompt"
+    )
+    allow_foundational_exceptions: bool = Field(
+        default_factory=lambda: get_settings().default_allow_foundational_exceptions,
+        description="Allow explicitly flagged pre-2019 foundational literature exceptions"
+    )
+
     event_callback: Any | None = Field(
         default=None,
         exclude=True,
@@ -96,4 +132,3 @@ class ResearchResult(BaseModel):
     stop_reason: str | None = Field(default=None, description="Human-readable reason for stopping")
     events: list[AgentEvent] = Field(default_factory=list, description="Chronological trace of agent events")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Execution parameters and metrics")
-

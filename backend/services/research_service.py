@@ -68,6 +68,14 @@ class ResearchService:
         """List historical research runs ordered by recency."""
         return await self.research_repo.list_runs(limit=limit, offset=offset)
 
+    async def delete_research_run(self, run_id: str) -> bool:
+        """Delete a single research run from history and database."""
+        return await self.research_repo.delete(run_id)
+
+    async def clear_all_research_runs(self) -> int:
+        """Delete all research runs from history and database."""
+        return await self.research_repo.delete_all()
+
     async def get_iterations(self, run_id: str) -> List[ResearchIterationModel]:
         """Fetch audit log iterations for a research run."""
         return await self.iteration_repo.get_by_run_id(run_id)

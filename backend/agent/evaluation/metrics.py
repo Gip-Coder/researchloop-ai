@@ -117,7 +117,9 @@ def compute_citation_distribution(papers: Sequence[Paper]) -> dict[str, Any]:
             "mean_citations": 0.0,
             "median_citations": 0.0,
             "max_citations": 0,
-            "papers_with_citation_data": 0
+            "papers_with_citation_data": 0,
+            "papers_missing_citation_data": len(papers),
+            "in_preferred_range_count": 0
         }
 
     return {
@@ -125,7 +127,9 @@ def compute_citation_distribution(papers: Sequence[Paper]) -> dict[str, Any]:
         "mean_citations": round(statistics.mean(citations), 2),
         "median_citations": round(statistics.median(citations), 2),
         "max_citations": max(citations),
-        "papers_with_citation_data": len(citations)
+        "papers_with_citation_data": len(citations),
+        "papers_missing_citation_data": len(papers) - len(citations),
+        "in_preferred_range_count": sum(1 for c in citations if 10 <= c <= 15)
     }
 
 
@@ -191,4 +195,3 @@ def compute_coherence(synthesis: Synthesis | None) -> float:
     )
 
     return round(min(1.0, max(0.0, total_coherence)), 3)
-

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ExternalLink, Filter, Search, SortAsc, CheckCircle2, XCircle } from 'lucide-react';
+import { ExternalLink, Filter, Search, SortAsc, CheckCircle2, XCircle, Award } from 'lucide-react';
 import { Paper } from '../types';
 
 interface PaperExplorerProps {
@@ -15,7 +15,7 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
   const filteredPapers = useMemo(() => {
     return papers
       .filter((p) => {
-        // Search term in title or abstract
+        // Search term in title, abstract, or authors
         if (searchTerm) {
           const term = searchTerm.toLowerCase();
           const inTitle = p.title.toLowerCase().includes(term);
@@ -40,7 +40,9 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           return (b.relevance_score || 0) - (a.relevance_score || 0);
         }
         if (sortBy === 'citations') {
-          return (b.citation_count || 0) - (a.citation_count || 0);
+          const aCit = a.citation_count !== null && a.citation_count !== undefined ? a.citation_count : -1;
+          const bCit = b.citation_count !== null && b.citation_count !== undefined ? b.citation_count : -1;
+          return bCit - aCit;
         }
         if (sortBy === 'year') {
           return (b.year || 0) - (a.year || 0);
@@ -81,8 +83,8 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           >
             <option value="all">All Academic Sources</option>
             <option value="arxiv">arXiv</option>
-            <option value="semantic_scholar">Semantic Scholar</option>
             <option value="crossref">Crossref</option>
+            <option value="semantic_scholar">Semantic Scholar</option>
           </select>
 
           <select
@@ -123,6 +125,8 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
           const relevancePct = paper.relevance_score !== null && paper.relevance_score !== undefined
             ? Math.round(paper.relevance_score * 100)
             : null;
+          const hasCitations = paper.citation_count !== null && paper.citation_count !== undefined;
+          const isPreferredCitationRange = hasCitations && (paper.citation_count! >= 10 && paper.citation_count! <= 15);
 
           return (
             <div key={paper.id} className="paper-card">
@@ -150,7 +154,31 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
                 <span className="source-badge">{paper.source}</span>
                 {paper.year && <span>Year: {paper.year}</span>}
                 {paper.venue && <span>Venue: {paper.venue}</span>}
-                <span>Citations: {paper.citation_count.toLocaleString()}</span>
+                <span
+                  style={{
+                    color: isPreferredCitationRange ? 'var(--primary)' : 'inherit',
+                    fontWeight: isPreferredCitationRange ? 600 : 'normal',
+                  }}
+                >
+                  Citations: {hasCitations ? paper.citation_count!.toLocaleString() : 'Unavailable'}
+                  {isPreferredCitationRange && ' (Preferred 10-15)'}
+                </span>
+
+                {paper.is_foundational_exception && (
+                  <span
+                    style={{
+                      fontSize: '0.72rem',
+                      padding: '0.1rem 0.4rem',
+                      borderRadius: '4px',
+                      backgroundColor: '#fef3c7',
+                      color: '#92400e',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Foundational Exception
+                  </span>
+                )}
+
                 {paper.doi && (
                   <a
                     href={`https://doi.org/${paper.doi}`}
@@ -198,6 +226,12 @@ export const PaperExplorer: React.FC<PaperExplorerProps> = ({ papers }) => {
               {paper.relevance_reason && (
                 <div className="relevance-box">
                   <strong>Relevance Assessment:</strong> {paper.relevance_reason}
+                </div>
+              )}
+
+              {paper.matched_queries && paper.matched_queries.length > 0 && (
+                <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                  <strong>Retrieved by query:</strong> {paper.matched_queries.join('; ')}
                 </div>
               )}
             </div>

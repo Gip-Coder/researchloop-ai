@@ -77,7 +77,13 @@ class SemanticScholarProvider(AcademicSource):
         abstract = raw.get("abstract")
         year = raw.get("year")
         venue = raw.get("venue")
-        citation_count = raw.get("citationCount") or 0
+
+        raw_citations = raw.get("citationCount")
+        citation_count: int | None = None
+        citation_count_available: bool = False
+        if raw_citations is not None and isinstance(raw_citations, (int, float)):
+            citation_count = int(raw_citations)
+            citation_count_available = True
 
         ext_ids = raw.get("externalIds") or {}
         doi = ext_ids.get("DOI")
@@ -96,9 +102,9 @@ class SemanticScholarProvider(AcademicSource):
             url=url,
             source="semantic_scholar",
             citation_count=citation_count,
+            citation_count_available=citation_count_available,
             publication_date=raw.get("publicationDate"),
             external_ids={k: str(v) for k, v in ext_ids.items() if v},
             categories=categories,
             raw_source_id=paper_id
         )
-

@@ -25,6 +25,8 @@ const sampleResult: ResearchResultData = {
     open_research_gaps: ['Conflicting evidence resolution in multi-document settings'],
     coherence_score: 1.0,
     relevance_score: 0.92,
+    evidence_target_met: false,
+    insufficient_evidence_warning: 'Notice: Synthesized evidence pool contains only 1 paper (target: 6-10).',
   },
   metadata: {},
 };
@@ -36,7 +38,8 @@ const samplePapers: Paper[] = [
     authors: ['Patrick Lewis'],
     year: 2020,
     source: 'arxiv',
-    citation_count: 5000,
+    citation_count: 12,
+    citation_count_available: true,
     is_relevant: true,
     categories: ['cs.CL'],
   },
@@ -51,5 +54,11 @@ describe('FinalReview Component', () => {
     expect(screen.getByText(/Retriever precision is paramount/i)).toBeInTheDocument();
     expect(screen.getByText(/Conflicting evidence resolution in multi-document settings/i)).toBeInTheDocument();
     expect(screen.getByText(/Patrick Lewis/i)).toBeInTheDocument();
+  });
+
+  it('renders evidence pool counter and shows warning when pool is under 6 papers', () => {
+    render(<FinalReview result={sampleResult} papers={samplePapers} />);
+    expect(screen.getByText(/Synthesized evidence pool contains only 1 paper/i)).toBeInTheDocument();
+    expect(screen.getByText(/Target: 6–10/i)).toBeInTheDocument();
   });
 });

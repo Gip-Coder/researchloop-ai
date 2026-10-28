@@ -41,7 +41,8 @@ class ArxivProvider(AcademicSource):
         end_year: int | None = None,
         **kwargs: Any
     ) -> list[Paper]:
-        clean_query = re.sub(r"[^\w\s-]", " ", query).strip()
+        # Preserve double quotes for multiword phrase queries while stripping control characters
+        clean_query = re.sub(r'[^\w\s"-]', " ", query).strip()
         search_query = f"all:{clean_query}"
 
         params = {
@@ -95,7 +96,7 @@ class ArxivProvider(AcademicSource):
             arxiv_url = id_elem.text.strip() if id_elem is not None and id_elem.text else None
             arxiv_id = arxiv_url.split("/abs/")[-1] if arxiv_url and "/abs/" in arxiv_url else (arxiv_url or "")
 
-            # Publication year
+            # Publication year from authoritative atom:published timestamp
             published_elem = entry.find("atom:published", NAMESPACES)
             pub_date = published_elem.text.strip() if published_elem is not None and published_elem.text else None
             year = int(pub_date[:4]) if pub_date and len(pub_date) >= 4 and pub_date[:4].isdigit() else None
@@ -116,6 +117,8 @@ class ArxivProvider(AcademicSource):
                 if term:
                     categories.append(term)
 
+            # Note: arXiv Atom API does NOT provide citation counts.
+            # Citation count is left as None (unknown) with citation_count_available=False.
             paper = Paper(
                 id=f"arxiv-{arxiv_id.replace('/', '_')}",
                 title=title,
@@ -126,7 +129,8 @@ class ArxivProvider(AcademicSource):
                 doi=doi,
                 url=arxiv_url,
                 source="arxiv",
-                citation_count=0,
+                citation_count=None,
+                citation_count_available=False,
                 publication_date=pub_date,
                 external_ids={"arxiv": arxiv_id} if arxiv_id else {},
                 categories=categories,
@@ -135,4 +139,3 @@ class ArxivProvider(AcademicSource):
             papers.append(paper)
 
         return papers
-

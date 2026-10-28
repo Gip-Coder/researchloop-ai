@@ -45,6 +45,18 @@ export async function getResearchRun(runId: string): Promise<ResearchRun> {
   return res.json();
 }
 
+export async function deleteResearchRun(runId: string): Promise<{ deleted: boolean; run_id: string }> {
+  const res = await fetch(`${API_BASE}/research/${runId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Failed to delete research run ${runId}`);
+  return res.json();
+}
+
+export async function clearAllResearchRuns(): Promise<{ deleted_count: number }> {
+  const res = await fetch(`${API_BASE}/research`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to clear research history');
+  return res.json();
+}
+
 export async function getIterations(runId: string): Promise<ResearchIteration[]> {
   const res = await fetch(`${API_BASE}/research/${runId}/iterations`);
   if (!res.ok) throw new Error('Failed to fetch iterations');

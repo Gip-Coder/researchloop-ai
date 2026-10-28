@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import List, Optional, Any
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -122,3 +122,21 @@ class ResearchRepository:
         await self.session.commit()
         await self.session.refresh(run)
         return run
+
+    async def delete(self, run_id: str) -> bool:
+        """Delete a research run and its cascade child records."""
+        run = await self.session.get(ResearchRunModel, run_id)
+        if not run:
+            return False
+        await self.session.delete(run)
+        await self.session.commit()
+        return True
+
+    async def delete_all(self) -> int:
+        """Delete all research runs and their associated cascade child records."""
+        runs = (await self.session.execute(select(ResearchRunModel))).scalars().all()
+        count = len(runs)
+        for r in runs:
+            await self.session.delete(r)
+        await self.session.commit()
+        return count

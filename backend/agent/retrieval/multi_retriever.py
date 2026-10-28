@@ -37,18 +37,36 @@ class MultiProviderRetriever:
 
         if providers is not None:
             self.providers = {p.name: p for p in providers}
-        elif self.mock_mode:
-            self.providers = {
-                "arxiv": MockAcademicProvider(name="arxiv"),
-                "semantic_scholar": MockAcademicProvider(name="semantic_scholar"),
-                "crossref": MockAcademicProvider(name="crossref"),
-            }
         else:
-            self.providers = {
-                "arxiv": ArxivProvider(timeout=settings.academic_request_timeout, max_retries=settings.academic_max_retries),
-                "semantic_scholar": SemanticScholarProvider(timeout=settings.academic_request_timeout, max_retries=settings.academic_max_retries),
-                "crossref": CrossrefProvider(timeout=settings.academic_request_timeout, max_retries=settings.academic_max_retries),
-            }
+            configured_sources = set(settings.preferred_sources)
+            self.providers = {}
+            if "arxiv" in configured_sources:
+                self.providers["arxiv"] = (
+                    MockAcademicProvider(name="arxiv")
+                    if self.mock_mode
+                    else ArxivProvider(
+                        timeout=settings.academic_request_timeout,
+                        max_retries=settings.academic_max_retries,
+                    )
+                )
+            if "crossref" in configured_sources:
+                self.providers["crossref"] = (
+                    MockAcademicProvider(name="crossref")
+                    if self.mock_mode
+                    else CrossrefProvider(
+                        timeout=settings.academic_request_timeout,
+                        max_retries=settings.academic_max_retries,
+                    )
+                )
+            if "semantic_scholar" in configured_sources:
+                self.providers["semantic_scholar"] = (
+                    MockAcademicProvider(name="semantic_scholar")
+                    if self.mock_mode
+                    else SemanticScholarProvider(
+                        timeout=settings.academic_request_timeout,
+                        max_retries=settings.academic_max_retries,
+                    )
+                )
 
     async def retrieve_for_plan(
         self,
@@ -58,13 +76,21 @@ class MultiProviderRetriever:
     ) -> list[Paper]:
         """
         Execute all search queries in the plan across configured providers concurrently.
-        Implements strict provider failure isolation.
+        Implements strict provider failure isolation. Excluded providers are never queried.
         """
+        # Only query sources that are both requested by the plan and actively configured/instantiated
         target_sources = [s for s in plan.preferred_sources if s in self.providers]
         if not target_sources:
             target_sources = list(self.providers.keys())
 
-        start_year = plan.date_range.start_year if plan.date_range else None
+        # If no providers are available at all
+        if not target_sources:
+            logger.warning("[MultiRetriever] No retrieval providers active in registry.")
+            return []
+
+        start_year = plan.min_publication_year if hasattr(plan, "min_publication_year") and plan.min_publication_year else (
+            plan.date_range.start_year if plan.date_range else None
+        )
         end_year = plan.date_range.end_year if plan.date_range else None
 
         tasks = []
@@ -106,6 +132,9 @@ class MultiProviderRetriever:
                     except Exception as cb_err:
                         logger.warning(f"[MultiRetriever] Failure event callback raised: {cb_err}")
             else:
+                for paper in outcome:
+                    if query not in paper.matched_queries:
+                        paper.matched_queries.append(query)
                 all_papers.extend(outcome)
 
         return all_papers
@@ -119,9 +148,8 @@ class MultiProviderRetriever:
     ) -> list[Paper]:
         cache_key = {
             "source": provider.name,
-            # Provider implementation is part of the key: mock providers reuse the names
-            # 'arxiv'/'semantic_scholar'/'crossref', so without this, cached fixture papers
-            # could be returned as real results to a live run (and vice versa).
+            # Provider implementation is part of the key: mock providers reuse names,
+            # so keeping provider_impl prevents cross-contamination.
             "provider_impl": f"{type(provider).__module__}.{type(provider).__qualname__}",
             "query": query,
             "start_year": start_year,
@@ -144,4 +172,3 @@ class MultiProviderRetriever:
         serializable = [p.model_dump() for p in papers]
         await self.cache.set("retrieval", cache_key, serializable)
         return papers
-

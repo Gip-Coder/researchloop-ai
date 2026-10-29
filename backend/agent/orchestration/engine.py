@@ -108,7 +108,7 @@ class ResearchEngine:
                 "min_synthesis_papers": cfg.min_synthesis_papers,
                 "target_synthesis_papers": cfg.target_synthesis_papers,
                 "preferred_sources": cfg.preferred_sources,
-                "min_publication_year": cfg.min_publication_year
+                "publication_year_filter": None
             }
         )
 
@@ -118,7 +118,8 @@ class ResearchEngine:
             search_plan = await planner.plan(research_question)
             # Ensure search plan inherits configured sources and temporal constraints
             search_plan.preferred_sources = [s for s in cfg.preferred_sources if s in search_plan.preferred_sources] or list(cfg.preferred_sources)
-            search_plan.min_publication_year = cfg.min_publication_year
+            search_plan.min_publication_year = None
+            search_plan.date_range = None
             search_plan.min_citations = cfg.min_citations
             search_plan.allow_unknown_citations = cfg.allow_unknown_citations
             search_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
@@ -184,12 +185,12 @@ class ResearchEngine:
                     preferred_min_citations=cfg.preferred_min_citations,
                     preferred_max_citations=cfg.preferred_max_citations,
                     strict_citation_filtering=cfg.strict_citation_filtering,
-                    min_year=cfg.min_publication_year,
+                    min_year=None,
                     allow_foundational=cfg.allow_foundational_exceptions,
                     min_citations=cfg.min_citations,
                     allow_unknown_citations=cfg.allow_unknown_citations,
                 )
-                synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
+                synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers]
 
                 await _emit(
                     EventType.SYNTHESIS_STARTED,
@@ -279,7 +280,8 @@ class ResearchEngine:
                 )
                 new_plan = await replanner.replan(state)
                 new_plan.preferred_sources = [s for s in cfg.preferred_sources if s in new_plan.preferred_sources] or list(cfg.preferred_sources)
-                new_plan.min_publication_year = cfg.min_publication_year
+                new_plan.min_publication_year = None
+                new_plan.date_range = None
                 new_plan.min_citations = cfg.min_citations
                 new_plan.allow_unknown_citations = cfg.allow_unknown_citations
                 new_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
@@ -327,25 +329,30 @@ class ResearchEngine:
             preferred_min_citations=cfg.preferred_min_citations,
             preferred_max_citations=cfg.preferred_max_citations,
             strict_citation_filtering=cfg.strict_citation_filtering,
-            min_year=cfg.min_publication_year,
+            min_year=None,
             allow_foundational=cfg.allow_foundational_exceptions,
             min_citations=cfg.min_citations,
             allow_unknown_citations=cfg.allow_unknown_citations,
         )
-        synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
-
-        insufficient_evidence = len(eligible_ranked) < cfg.min_synthesis_papers
+        synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers]
+        used_ids = {
+            row.paper_id for row in (state.synthesis.evidence_matrix if state.synthesis else [])
+            if row.included_in_synthesis
+        }
+        synthesized_papers = [paper for paper in synthesis_papers if paper.id in used_ids]
+        insufficient_evidence = (
+            len(eligible_ranked) < cfg.min_synthesis_papers
+            or len(synthesized_papers) < cfg.min_synthesis_papers
+        )
         qualifiers = []
         if cfg.min_citations:
             qualifiers.append(f"min {cfg.min_citations} citations")
-        if cfg.min_publication_year:
-            qualifiers.append(f"published {cfg.min_publication_year}+")
         qual_str = f" ({', '.join(qualifiers)})" if qualifiers else ""
 
         evidence_warning = (
             f"Evidence target of {cfg.min_synthesis_papers} eligible papers not met: "
-            f"found {len(eligible_ranked)} eligible papers{qual_str}. "
-            f"Synthesizing available {len(synthesis_papers)} papers."
+            f"found {len(eligible_ranked)} eligible papers, of which {len(synthesized_papers)} contributed to synthesis{qual_str}. "
+            "Using available evidence without padding the review."
             if insufficient_evidence else None
         )
 
@@ -356,7 +363,7 @@ class ResearchEngine:
                 {
                     "title": t.title,
                     "description": t.description,
-                    "paper_count": len(t.paper_ids),
+                    "paper_count": len(set(t.paper_ids)),
                     "key_findings": t.key_findings,
                     "paper_ids": t.paper_ids
                 }
@@ -364,11 +371,28 @@ class ResearchEngine:
             ],
             "consensus_findings": state.synthesis.agreements if state.synthesis else [],
             "open_research_gaps": state.synthesis.research_gaps if state.synthesis else [],
+            "research_question_and_scope": {
+                "question": state.research_question,
+                "publication_year_filter": None,
+                "eligible_papers": len(eligible_ranked),
+                "papers_used": len(synthesized_papers),
+            },
+            "search_and_selection_methodology": {
+                "sources": cfg.preferred_sources,
+                "queries": state.search_plan.search_queries if state.search_plan else [],
+                "selection": "Relevance ranked; publication year is descriptive metadata only; 10–15 citation counts are a preference only.",
+            },
+            "evidence_matrix": [row.model_dump() for row in (state.synthesis.evidence_matrix if state.synthesis else [])],
+            "quality_warnings": state.synthesis.quality_warnings if state.synthesis else [],
+            "limitations_of_review": [
+                "Synthesis uses retrieved metadata and abstracts unless a source passage is explicitly available.",
+                "Provider coverage and retrieved evidence may not represent the full literature.",
+            ],
             "coherence_score": coherence,
             "relevance_score": avg_rel,
             "evidence_target_met": not insufficient_evidence,
             "eligible_papers_count": len(eligible_ranked),
-            "synthesis_papers_count": len(synthesis_papers),
+            "synthesis_papers_count": len(synthesized_papers),
             "min_synthesis_papers": cfg.min_synthesis_papers,
             "target_synthesis_papers": cfg.target_synthesis_papers,
             "max_synthesis_papers": cfg.max_synthesis_papers,
@@ -388,7 +412,7 @@ class ResearchEngine:
                     "is_foundational_exception": p.is_foundational_exception,
                     "matched_queries": p.matched_queries
                 }
-                for p in synthesis_papers
+                for p in synthesized_papers
             ]
         }
 
@@ -412,7 +436,7 @@ class ResearchEngine:
                 "total_papers_retrieved": len(state.papers),
                 "relevant_papers_retained": len(state.relevant_papers),
                 "eligible_synthesis_papers": len(eligible_ranked),
-                "synthesis_papers_used": len(synthesis_papers),
+                "synthesis_papers_used": len(synthesized_papers),
                 "citation_metrics": citation_stats,
                 "completed_iterations": len(state.iteration_history),
                 "insufficient_evidence_warning": evidence_warning

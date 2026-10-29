@@ -98,7 +98,8 @@ class AgentSettings(BaseModel):
 
     # Research Quality & Paper Selection Hyperparameters
     default_min_publication_year: int | None = Field(
-        default_factory=lambda: int(os.getenv("MIN_PUBLICATION_YEAR")) if os.getenv("MIN_PUBLICATION_YEAR") and os.getenv("MIN_PUBLICATION_YEAR").strip().lower() not in ("none", "0", "") else None
+        default=None,
+        description="Deprecated; publication year is metadata and does not affect paper eligibility.",
     )
     default_min_citations: int = Field(
         default_factory=lambda: int(os.getenv("MIN_CITATIONS", "5"))

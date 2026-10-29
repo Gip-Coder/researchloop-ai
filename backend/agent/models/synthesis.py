@@ -19,6 +19,30 @@ class PaperAnalysis(BaseModel):
     contribution: str = Field(description="Novel contribution to the research field")
     limitations: list[str] = Field(default_factory=list, description="Reported or identified limitations and caveats")
     relevance: str = Field(description="Specific relevance to the overarching research question")
+    evidence_level: str = Field(default="abstract_only", description="Evidence inspected: abstract_only or full_text")
+    source_url: str | None = Field(default=None, description="URL or DOI supplied by the source record")
+    supporting_evidence: list[str] = Field(default_factory=list, description="Verbatim source passages supporting this analysis")
+
+
+class PaperEvidence(BaseModel):
+    """Internal paper-to-theme matrix; unavailable evidence remains explicitly unknown."""
+
+    paper_id: str
+    title: str
+    year: int | None = None
+    source_url: str | None = None
+    healthcare_relevance: str | None = None
+    privacy_mechanism: str | None = None
+    accuracy_evaluation: str | None = None
+    security_threat_or_defense: str | None = None
+    deployment_context: str | None = None
+    dataset_and_method: str | None = None
+    main_supported_finding: str | None = None
+    author_reported_limitations: list[str] = Field(default_factory=list)
+    themes: list[str] = Field(default_factory=list)
+    included_in_synthesis: bool = True
+    evidence_level: str = "abstract_only"
+    evidence_text: str | None = None
 
 
 class Theme(BaseModel):
@@ -55,4 +79,6 @@ class Synthesis(BaseModel):
     trends: list[str] = Field(default_factory=list, description="Emerging patterns and research trajectories")
     research_gaps: list[str] = Field(default_factory=list, description="Unexplored questions and open challenges")
     narrative_summary: str = Field(default="", description="Executive narrative synthesis of the state-of-the-art")
+    evidence_matrix: list[PaperEvidence] = Field(default_factory=list, description="Paper-to-theme evidence matrix")
+    quality_warnings: list[str] = Field(default_factory=list, description="Evidence limitations and unsupported areas")
 

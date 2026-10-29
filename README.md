@@ -28,16 +28,15 @@ Frontend Visualization (Dashboard, Trace, Papers, Themes, Gaps, Review, Evaluati
 
 ResearchLoop AI implements rigorous academic selection and evidence synthesis standards:
 
-### 1. Publication-Year Boundary & Foundational Exceptions
-- **Default Minimum Year**: `2019` (`MIN_PUBLICATION_YEAR=2019`).
-- **Policy**: Only papers published in 2019 or later are accepted for substantive thematic synthesis and bibliography by default.
-- **Foundational Exceptions**: Pre-2019 seminal papers are strictly excluded by default unless `ALLOW_FOUNDATIONAL_EXCEPTIONS=true` is explicitly enabled. When enabled, exceptions are clearly flagged with `[Foundational Exception]` tags in the UI and bibliography.
-- **Deterministic Date Handling**: Authoritative date records from arXiv and Crossref are parsed into four-digit years. Missing or malformed dates are handled deterministically without fabricating dates.
+### 1. Publication-Year Metadata
+- Publication year is retained and shown when a provider supplies it, but it does not restrict retrieval, relevance review, ranking, synthesis, or bibliography inclusion.
+- Older and undated papers remain eligible; their year is never inferred when missing.
+- `MIN_PUBLICATION_YEAR` is a deprecated legacy setting and is ignored.
 
 ### 2. Citation-Count Preference (10–15 Citations)
 - **Configurable Range**: Preferred 10–15 citations (`PREFERRED_MIN_CITATIONS=10`, `PREFERRED_MAX_CITATIONS=15`).
-- **Preference-Based Ranking**: Citation counts serve as a ranking preference rather than a hard exclusion filter. Papers with citations in the 10–15 range are prioritized; high-relevance papers (relevance score $\ge 0.85$) outside the range remain eligible to ensure cutting-edge findings are not omitted.
-- **Unknown Citations Handling**: arXiv and non-indexed records do not fabricate zero citations; missing counts are preserved as `None`/`Unavailable` (`citation_count_available=False`) and ranked fairly in an unknown-citation tier. Strict filtering (`STRICT_CITATION_FILTERING=true`) can be toggled if required.
+- **Preference-Based Ranking**: Relevance is the primary ranking factor. When relevance scores are similar, available 10–15 citation counts are preferred; citation counts are not treated as a standalone measure of quality.
+- **Unknown Citations Handling**: Missing counts remain `None`/`Unavailable` (`citation_count_available=False`), never zero.
 
 ### 3. Phrase-Based Academic Search & Provenance
 - **Multiword Phrase Queries**: The planner and replanner generate meaningful multiword quoted phrases (e.g., `"retrieval-augmented generation" evaluation benchmark`) preserving quotes across arXiv and Crossref search APIs.
@@ -94,7 +93,7 @@ ResearchLoop AI defaults to `PREFERRED_SOURCES=arxiv,crossref`.
 | `LLM_PROVIDER` | `mock` | `'mock'`, `'openai'`, `'anthropic'`, `'gemini'`, or `'ollama'` |
 | `LLM_MODEL` | *(provider default)* | Model override (e.g. `gpt-4o-mini`, `gemini-1.5-flash`, `llama3.2:3b`) |
 | `PREFERRED_SOURCES` | `arxiv,crossref` | Comma-separated retrieval providers (`arxiv,crossref,semantic_scholar`) |
-| `MIN_PUBLICATION_YEAR` | `2019` | Default minimum publication year for academic papers |
+| `MIN_PUBLICATION_YEAR` | ignored | Deprecated legacy setting; publication year does not filter papers |
 | `PREFERRED_MIN_CITATIONS` | `10` | Preferred minimum citations for ranking |
 | `PREFERRED_MAX_CITATIONS` | `15` | Preferred maximum citations for ranking |
 | `STRICT_CITATION_FILTERING` | `false` | Whether to strictly exclude papers outside citation range |
@@ -138,8 +137,8 @@ All tests run **100% offline with zero external API credentials** by default.
 ```powershell
 uv run --extra test pytest
 ```
-Runs 91+ unit, integration, and API tests covering:
-- Publication-year filtering, missing dates, and foundational exceptions
+Runs unit, integration, and API tests covering:
+- Publication year as descriptive metadata only, including old and undated records
 - Citation range ranking (10–15 preference), strict mode, and unavailable citation handling
 - Phrase-based search queries and deduplication
 - Evidence pool sizing and insufficient evidence warnings

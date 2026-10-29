@@ -88,10 +88,9 @@ class MultiProviderRetriever:
             logger.warning("[MultiRetriever] No retrieval providers active in registry.")
             return []
 
-        start_year = plan.min_publication_year if hasattr(plan, "min_publication_year") and plan.min_publication_year else (
-            plan.date_range.start_year if plan.date_range else None
-        )
-        end_year = plan.date_range.end_year if plan.date_range else None
+        # Publication year is returned as metadata; it does not constrain retrieval.
+        start_year = None
+        end_year = None
 
         tasks = []
         task_descriptors = []

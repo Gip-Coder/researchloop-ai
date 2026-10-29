@@ -40,8 +40,8 @@ class ResearchConfig(BaseModel):
 
     # Research Quality & Paper Selection Hyperparameters
     min_publication_year: int | None = Field(
-        default_factory=lambda: get_settings().default_min_publication_year,
-        description="Minimum publication year for eligible literature (None for no restriction)"
+        default=None,
+        description="Deprecated and ignored; publication year is descriptive metadata only"
     )
     min_citations: int = Field(
         default_factory=lambda: get_settings().default_min_citations,

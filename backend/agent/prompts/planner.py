@@ -12,7 +12,7 @@ Guidelines:
 2. Extract domain-specific academic terminology, keywords, and synonyms.
 3. Formulate 4 to 8 targeted, high-precision search queries suitable for academic search engines (such as arXiv and Crossref).
    CRITICAL REQUIREMENT: Use meaningful multiword phrases enclosed in double quotes combined with specific domain or methodological terms (e.g. '"retrieval-augmented generation" benchmark evaluation', '"dense passage retrieval" factuality', '"evidence grounding" large language models'). Avoid isolated generic single words.
-4. Establish concrete inclusion and exclusion criteria, prioritizing papers meeting minimum citation thresholds.
+4. Establish concrete inclusion and exclusion criteria, prioritizing research relevance and methods; do not use publication year as a filter.
 5. Establish concrete inclusion criteria (what characteristics make a paper essential to answer the question).
 6. Establish concrete exclusion criteria (what irrelevant, out-of-scope, or superficial papers must be discarded).
 
@@ -35,4 +35,5 @@ Generate:
 - min_citations: minimum citations threshold (default: 5).
 - inclusion_criteria: list of 3 to 5 inclusion rules.
 - exclusion_criteria: list of 3 to 5 exclusion rules.
+- Treat publication year as metadata only; do not exclude older or undated papers by year.
 """

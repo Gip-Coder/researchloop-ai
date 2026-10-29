@@ -71,8 +71,8 @@ async def test_relevance_matrix_clearly_irrelevant(rag_search_plan):
 
 
 @pytest.mark.asyncio
-async def test_relevance_matrix_temporal_boundary(rag_search_plan):
-    """Paper published prior to start_year (2020) must be rejected on temporal grounds."""
+async def test_relevance_matrix_keeps_historical_paper(rag_search_plan):
+    """Paper publication date does not gate relevance review."""
     llm = MockLLMProvider()
     rf = RelevanceFilter(llm_provider=llm)
     p = Paper(
@@ -83,9 +83,9 @@ async def test_relevance_matrix_temporal_boundary(rag_search_plan):
         year=1995
     )
     rel, rej = await rf.filter_papers([p], rag_search_plan)
-    assert len(rel) == 0
-    assert len(rej) == 1
-    assert "prior to start_year" in rej[0].relevance_reason
+    assert len(rel) == 1
+    assert rel[0].year == 1995
+    assert rej == []
 
 
 @pytest.mark.asyncio

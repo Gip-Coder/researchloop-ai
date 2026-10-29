@@ -192,7 +192,7 @@ class ResearchRunner:
             preferred_sources=run_config.get("preferred_sources", list(settings.preferred_sources)),
             mock_mode=is_mock,
             temperature=run_config.get("temperature", 0.2),
-            min_publication_year=run_config.get("min_publication_year", settings.default_min_publication_year),
+            min_publication_year=None,
             min_citations=run_config.get("min_citations", settings.default_min_citations),
             allow_unknown_citations=run_config.get("allow_unknown_citations", settings.default_allow_unknown_citations),
             preferred_min_citations=run_config.get("preferred_min_citations", settings.default_preferred_min_citations),

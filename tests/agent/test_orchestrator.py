@@ -36,7 +36,10 @@ async def test_orchestrator_multi_iteration_run():
     assert len(result.iterations) >= 1
     assert len(result.papers) > 0
     assert len(result.relevant_papers) > 0
-    assert len(result.themes) > 0
+    # Mock mode groups exact source excerpts for inspection, not substantive themes.
+    assert len(result.themes) == 1
+    assert "not thematically interpreted" in result.themes[0].title
+    assert "does not perform substantive literature synthesis" in result.synthesis.quality_warnings[0]
     assert result.synthesis is not None
     assert len(result.events) > 0
 

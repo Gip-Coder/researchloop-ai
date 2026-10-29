@@ -36,7 +36,6 @@ class ResearchConfigInput(BaseModel):
     temperature: float = Field(default=0.2, ge=0.0, le=1.0, description="LLM temperature")
 
     # Research Quality & Paper Selection Configs
-    min_publication_year: Optional[int] = Field(default=None, description="Optional minimum publication year constraint (None for no restriction)")
     min_citations: int = Field(default=5, ge=0, description="Minimum citations constraint (papers with known citation count must meet this threshold)")
     allow_unknown_citations: bool = Field(default=True, description="Allow papers with unknown citation counts (e.g. arXiv preprints)")
     preferred_min_citations: int = Field(default=10, description="Minimum preferred citation count")

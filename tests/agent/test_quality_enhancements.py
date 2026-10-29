@@ -24,12 +24,12 @@ from backend.providers.llm.mock import MockLLMProvider
 
 
 # -------------------------------------------------------------------------
-# Phase 2.1: Publication Year Constraint Tests
+# Publication Year Metadata Tests
 # -------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_publication_year_filter_defaults_to_2019():
-    """Verify papers before 2019 are excluded, 2019 and newer are eligible."""
+async def test_publication_year_does_not_filter_papers():
+    """Old, recent, and undated records remain eligible for relevance review."""
     llm = MockLLMProvider()
     rf = RelevanceFilter(llm_provider=llm)
     plan = SearchPlan(
@@ -63,20 +63,13 @@ async def test_publication_year_filter_defaults_to_2019():
     relevant, rejected = await rf.filter_papers([p_2018, p_2019, p_2024], plan)
 
     rel_ids = [p.id for p in relevant]
-    rej_ids = [p.id for p in rejected]
-
-    assert "p-2018" in rej_ids
-    assert "p-2019" in rel_ids
-    assert "p-2024" in rel_ids
-    # Check rejection reason explicitly states publication year constraint
-    rej_2018 = next(p for p in rejected if p.id == "p-2018")
-    assert "2018" in rej_2018.relevance_reason
-    assert "2019" in rej_2018.relevance_reason
+    assert set(rel_ids) == {"p-2018", "p-2019", "p-2024"}
+    assert rejected == []
 
 
 @pytest.mark.asyncio
-async def test_missing_year_handled_deterministically():
-    """Papers with missing publication year must be excluded deterministically with explanation."""
+async def test_missing_year_is_metadata_not_an_exclusion():
+    """A missing publication year does not prevent relevance review."""
     llm = MockLLMProvider()
     rf = RelevanceFilter(llm_provider=llm)
     plan = SearchPlan(
@@ -93,14 +86,14 @@ async def test_missing_year_handled_deterministically():
     )
 
     relevant, rejected = await rf.filter_papers([p_undated], plan)
-    assert len(relevant) == 0
-    assert len(rejected) == 1
-    assert "Publication year missing" in rejected[0].relevance_reason
+    assert len(relevant) == 1
+    assert relevant[0].year is None
+    assert rejected == []
 
 
 @pytest.mark.asyncio
-async def test_foundational_exception_policy():
-    """Pre-2019 paper is excluded by default, but admitted only when foundational exception is explicitly allowed."""
+async def test_old_paper_needs_no_foundational_exception():
+    """Publication year and the foundational exception flag do not control eligibility."""
     llm = MockLLMProvider()
     rf = RelevanceFilter(llm_provider=llm)
 
@@ -113,15 +106,15 @@ async def test_foundational_exception_policy():
         abstract="The Transformer architecture based entirely on self-attention mechanisms."
     )
 
-    # 1. Default policy: allow_foundational_exceptions=False
+    # Historical date and exception flag do not control eligibility.
     plan_default = SearchPlan(
         research_question="Transformer architectures in language modeling",
         min_publication_year=2019,
         allow_foundational_exceptions=False
     )
     rel_def, rej_def = await rf.filter_papers([p_vaswani], plan_default)
-    assert len(rel_def) == 0
-    assert len(rej_def) == 1
+    assert len(rel_def) == 1
+    assert len(rej_def) == 0
 
     # 2. Explicitly allowed foundational exceptions
     plan_allowed = SearchPlan(
@@ -181,13 +174,12 @@ def test_citation_preference_ranking_policy():
     assert len(eligible) == 5
     assert len(excluded) == 0
 
-    # Top papers should be in-range citations (Tier 1)
+    # Relevance ranks first; citation range is a preference among similarly relevant papers.
     top_ids = [p.id for p in eligible[:2]]
-    assert "p-in-range-2" in top_ids
-    assert "p-in-range-1" in top_ids
+    assert top_ids == ["p-high-rel-many-cit", "p-in-range-2"]
 
     # High-relevance paper with 4000 citations is in Tier 2
-    assert eligible[2].id in ("p-high-rel-many-cit", "p-unknown-cit")
+    assert eligible[2].id == "p-unknown-cit"
 
 
 def test_strict_citation_filtering_policy():

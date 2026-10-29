@@ -124,8 +124,8 @@ class ReplanningAgent:
             keywords=prev.keywords if prev else [],
             search_queries=candidate_queries[:6],
             preferred_sources=prev.preferred_sources if prev else list(settings.preferred_sources),
-            min_publication_year=settings.default_min_publication_year,
-            date_range=prev.date_range if prev else None,
+            min_publication_year=None,
+            date_range=None,
             inclusion_criteria=prev.inclusion_criteria if prev else [],
             exclusion_criteria=prev.exclusion_criteria if prev else []
         )

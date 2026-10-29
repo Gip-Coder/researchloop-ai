@@ -33,16 +33,17 @@ async def test_synthesis_with_papers(mock_llm: MockLLMProvider, sample_papers: l
 
     assert isinstance(result, Synthesis)
     assert len(result.paper_analyses) > 0
-    assert len(result.themes) > 0
-    assert len(result.agreements) > 0
-    assert len(result.differences) > 0
-    assert len(result.research_gaps) > 0
+    # Mock mode surfaces exact source excerpts without claiming cross-paper themes.
+    assert len(result.themes) == 1
+    assert "not thematically interpreted" in result.themes[0].title
+    assert result.agreements == []
+    assert result.differences == []
+    assert result.research_gaps == []
     assert len(result.narrative_summary) > 50
 
     # Verify per-paper extraction fields
     first_analysis = result.paper_analyses[0]
-    assert first_analysis.research_problem != ""
-    assert first_analysis.methodology != ""
-    assert first_analysis.contribution != ""
-    assert len(first_analysis.key_findings) > 0
+    assert first_analysis.evidence_level == "abstract_only"
+    assert first_analysis.supporting_evidence == first_analysis.key_findings
+    assert first_analysis.methodology == "Not reported by the deterministic mock."
 

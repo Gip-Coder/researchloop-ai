@@ -44,7 +44,7 @@ async def test_relevance_filter_keeps_relevant_papers(mock_llm: MockLLMProvider,
 
 
 @pytest.mark.asyncio
-async def test_relevance_filter_date_boundary(mock_llm: MockLLMProvider, sample_plan: SearchPlan):
+async def test_relevance_filter_does_not_apply_date_boundary(mock_llm: MockLLMProvider, sample_plan: SearchPlan):
     rfilter = RelevanceFilter(llm_provider=mock_llm)
     # Plan has date_range: 2020 to 2026
     p_old = Paper(
@@ -56,7 +56,7 @@ async def test_relevance_filter_date_boundary(mock_llm: MockLLMProvider, sample_
     )
 
     relevant, rejected = await rfilter.filter_papers([p_old], sample_plan)
-    assert len(relevant) == 0
-    assert len(rejected) == 1
-    assert "Published in 1995" in rejected[0].relevance_reason
+    assert len(relevant) == 1
+    assert relevant[0].year == 1995
+    assert rejected == []
 

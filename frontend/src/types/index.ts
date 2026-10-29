@@ -9,7 +9,6 @@ export interface ResearchConfigInput {
   llm_model?: string;
   preferred_sources?: string[];
   temperature?: number;
-  min_publication_year?: number;
   preferred_min_citations?: number;
   preferred_max_citations?: number;
   strict_citation_filtering?: boolean;
@@ -48,7 +47,6 @@ export interface ResearchIteration {
     keywords?: string[];
     search_queries?: string[];
     preferred_sources?: string[];
-    min_publication_year?: number;
     inclusion_criteria?: string[];
     exclusion_criteria?: string[];
   };
@@ -135,6 +133,37 @@ export interface FinalReview {
   target_synthesis_papers?: number;
   max_synthesis_papers?: number;
   insufficient_evidence_warning?: string | null;
+  research_question_and_scope?: {
+    question: string;
+    publication_year_filter?: null;
+    eligible_papers: number;
+    papers_used: number;
+  };
+  search_and_selection_methodology?: {
+    sources: string[];
+    queries: string[];
+    selection: string;
+  };
+  quality_warnings?: string[];
+  limitations_of_review?: string[];
+  evidence_matrix?: Array<{
+    paper_id: string;
+    title: string;
+    year?: number | null;
+    source_url?: string | null;
+    healthcare_relevance?: string | null;
+    privacy_mechanism?: string | null;
+    accuracy_evaluation?: string | null;
+    security_threat_or_defense?: string | null;
+    deployment_context?: string | null;
+    dataset_and_method?: string | null;
+    main_supported_finding?: string | null;
+    author_reported_limitations: string[];
+    themes: string[];
+    included_in_synthesis: boolean;
+    evidence_level: string;
+    evidence_text?: string | null;
+  }>;
   bibliography?: Array<{
     id: string;
     title: string;

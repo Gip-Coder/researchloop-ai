@@ -31,6 +31,16 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
     if (review.insufficient_evidence_warning) {
       md += `> **Notice**: ${review.insufficient_evidence_warning}\n\n`;
     }
+    const scope = review.research_question_and_scope;
+    if (scope) {
+      md += `## Research Question and Scope\n\n${scope.question}\n\n`;
+      md += `Eligible papers: ${scope.eligible_papers}; papers contributing to synthesis: ${scope.papers_used}. Publication year is recorded as metadata and does not filter eligibility.\n\n`;
+    }
+    const methodology = review.search_and_selection_methodology;
+    if (methodology) {
+      md += `## Search and Selection Methodology\n\nSources: ${methodology.sources.join(', ') || 'not recorded'}. ${methodology.selection}\n\n`;
+      if (methodology.queries.length) md += `Queries: ${methodology.queries.join('; ')}\n\n`;
+    }
     md += `## Executive Summary\n\n${review.narrative}\n\n`;
     md += `## Key Thematic Findings\n\n`;
     for (const t of review.key_themes || []) {
@@ -52,6 +62,25 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
       md += `## Open Research Gaps\n\n`;
       for (const g of review.open_research_gaps) {
         md += `- ${g}\n`;
+      }
+      md += `\n`;
+    }
+    if (review.quality_warnings?.length) {
+      md += `## Evidence Warnings\n\n${review.quality_warnings.map((warning) => `- ${warning}`).join('\n')}\n\n`;
+    }
+    if (review.limitations_of_review?.length) {
+      md += `## Limitations of the Review\n\n${review.limitations_of_review.map((limitation) => `- ${limitation}`).join('\n')}\n\n`;
+    }
+    if (review.evidence_matrix?.length) {
+      md += `## Paper-to-Theme Evidence Matrix\n\n`;
+      md += `| Paper | Year | Healthcare relevance | Privacy mechanism | Accuracy | Security | Deployment | Dataset/method | Supported finding | Author limitations | Included | Evidence level |\n|---|---:|---|---|---|---|---|---|---|---|---|---|\n`;
+      for (const row of review.evidence_matrix) {
+        const cell = (value?: string | null) => (value || 'Unknown').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+        md += `| ${cell(row.title)} (${row.paper_id}) | ${row.year ?? 'Unknown'} | ${cell(row.healthcare_relevance)} | ${cell(row.privacy_mechanism)} | ${cell(row.accuracy_evaluation)} | ${cell(row.security_threat_or_defense)} | ${cell(row.deployment_context)} | ${cell(row.dataset_and_method)} | ${cell(row.main_supported_finding)} | ${cell(row.author_reported_limitations.join('; '))} | ${row.included_in_synthesis ? 'Yes' : 'No'} | ${row.evidence_level} |\n`;
+      }
+      for (const row of review.evidence_matrix) {
+        md += `\n### ${row.title} (${row.paper_id}) — ${row.evidence_level}\n\n`;
+        md += row.evidence_text ? `> ${row.evidence_text.replace(/\n/g, '\n> ')}\n` : `> Source passage unavailable.\n`;
       }
       md += `\n`;
     }
@@ -144,8 +173,24 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
       <article className="literature-review-doc">
         <h1 className="review-doc-title">{review.title}</h1>
 
+        {review.research_question_and_scope && (
+          <div className="review-section">
+            <h2 className="review-section-heading">1. Research Question and Scope</h2>
+            <p className="review-prose">{review.research_question_and_scope.question}</p>
+            <p className="review-prose">{review.research_question_and_scope.papers_used} papers contributed from {review.research_question_and_scope.eligible_papers} eligible records. Publication year is recorded as metadata only.</p>
+          </div>
+        )}
+
+        {review.search_and_selection_methodology && (
+          <div className="review-section">
+            <h2 className="review-section-heading">2. Search and Selection Methodology</h2>
+            <p className="review-prose">Sources: {review.search_and_selection_methodology.sources.join(', ') || 'not recorded'}. {review.search_and_selection_methodology.selection}</p>
+            {review.search_and_selection_methodology.queries.length > 0 && <p className="review-prose">Queries: {review.search_and_selection_methodology.queries.join('; ')}</p>}
+          </div>
+        )}
+
         <div className="review-section">
-          <h2 className="review-section-heading">1. Executive Summary & Synthesis</h2>
+          <h2 className="review-section-heading">3. Executive Summary</h2>
           <p className="review-prose">{review.narrative}</p>
         </div>
 
@@ -187,6 +232,46 @@ export const FinalReview: React.FC<FinalReviewProps> = ({ result, papers }) => {
                 <li key={idx} style={{ marginBottom: '0.4rem' }}>{gap}</li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {!!review.quality_warnings?.length && (
+          <div className="review-section">
+            <h2 className="review-section-heading">Evidence Warnings</h2>
+            <ul>{review.quality_warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>
+          </div>
+        )}
+
+        {!!review.limitations_of_review?.length && (
+          <div className="review-section">
+            <h2 className="review-section-heading">Limitations of the Review</h2>
+            <ul>{review.limitations_of_review.map((limitation, index) => <li key={index}>{limitation}</li>)}</ul>
+          </div>
+        )}
+
+        {!!review.evidence_matrix?.length && (
+          <div className="review-section" style={{ overflowX: 'auto' }}>
+            <h2 className="review-section-heading">Paper-to-Theme Evidence Matrix</h2>
+            <table style={{ borderCollapse: 'collapse', minWidth: 1100, fontSize: '0.8rem' }}>
+              <thead><tr>{['Paper', 'Year', 'Healthcare relevance', 'Privacy mechanism', 'Accuracy', 'Security', 'Deployment', 'Dataset / method', 'Supported finding', 'Author limitations', 'Themes', 'Evidence'].map((heading) => <th key={heading} style={{ textAlign: 'left', padding: '0.4rem', borderBottom: '1px solid var(--border-subtle)' }}>{heading}</th>)}</tr></thead>
+              <tbody>{review.evidence_matrix.map((row) => <tr key={row.paper_id}>
+                <td style={{ padding: '0.4rem' }}>{row.title} <small>({row.paper_id})</small></td>
+                <td style={{ padding: '0.4rem' }}>{row.year ?? 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.healthcare_relevance || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.privacy_mechanism || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.accuracy_evaluation || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.security_threat_or_defense || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.deployment_context || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.dataset_and_method || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.main_supported_finding || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.author_reported_limitations.join('; ') || 'Unknown'}</td>
+                <td style={{ padding: '0.4rem' }}>{row.themes.join(', ') || 'None'}</td>
+                <td style={{ padding: '0.4rem' }}>
+                  {row.evidence_level}{row.included_in_synthesis ? ' · included' : ' · not included'}
+                  <details><summary>Source evidence</summary><p>{row.evidence_text || 'Source passage unavailable.'}</p></details>
+                </td>
+              </tr>)}</tbody>
+            </table>
           </div>
         )}
 

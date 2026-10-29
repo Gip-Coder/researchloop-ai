@@ -33,22 +33,15 @@ def rank_papers_for_synthesis(
     Rank and partition papers for thematic synthesis based on relevance and citation preference.
 
     Policy:
-    1. Year verification:
-       - Papers published >= min_year (e.g. 2019) are eligible.
-       - Papers with missing/unresolvable publication year are excluded from substantive review.
-       - Papers published < min_year are excluded by default, UNLESS allow_foundational is True
-         AND the paper was explicitly flagged as a foundational exception (is_foundational_exception=True).
+    1. Publication year is descriptive metadata and never a selection criterion.
     2. Citation Preference (10-15 range):
        - If strict_citation_filtering is True:
          Only papers with known citations in [preferred_min_citations, preferred_max_citations] are eligible.
        - If strict_citation_filtering is False (default):
-         All relevant papers meeting year criteria remain eligible.
+         All relevant papers remain eligible regardless of publication year.
          Citation counts guide ranking priority:
-           Tier 1: Verified in-range citations (10 <= citations <= 15).
-           Tier 2: High-relevance papers (relevance_score >= 0.85) outside range or unknown.
-           Tier 3: Other relevant papers with known citations (< 10 or > 15).
-           Tier 4: Other relevant papers with unknown citations.
-         Within tiers, papers are ordered by relevance_score descending, then proximity to [10, 15].
+         Relevance is the primary rank. In-range counts break ties as a preference only;
+         unknown counts remain unknown and are never treated as zero.
 
     Returns:
         (eligible_ranked_papers, excluded_papers)
@@ -57,19 +50,8 @@ def rank_papers_for_synthesis(
     excluded: list[Paper] = []
 
     for paper in papers:
-        # Check year eligibility only if min_year is specified
-        if min_year is not None:
-            if paper.year is None:
-                excluded.append(paper)
-                continue
-
-            if paper.year < min_year:
-                if allow_foundational and paper.is_foundational_exception:
-                    # Valid foundational exception
-                    pass
-                else:
-                    excluded.append(paper)
-                    continue
+        # Publication year does not affect eligibility. Keep min_year and
+        # allow_foundational in the signature for compatibility with callers.
 
         # Check minimum citations constraint
         if min_citations is not None and min_citations > 0:
@@ -97,21 +79,13 @@ def rank_papers_for_synthesis(
             return float(c - preferred_max_citations)
         return 0.0
 
-    def _sort_key(p: Paper) -> tuple[int, float, float]:
+    def _sort_key(p: Paper) -> tuple[float, int, float]:
         rel = p.relevance_score if p.relevance_score is not None else 0.5
         in_range = is_in_citation_range(p, preferred_min_citations, preferred_max_citations)
-
-        if in_range:
-            tier = 1
-        elif rel >= 0.85:
-            tier = 2
-        elif p.citation_count is not None:
-            tier = 3
-        else:
-            tier = 4
-
-        # Within tier: higher relevance first (-rel), then closest citation distance
-        return (tier, -rel, _citation_distance(p.citation_count))
+        # Similar-relevance papers prefer the requested citation range; citation
+        # metadata never outranks a more relevant paper.
+        citation_preference = 0 if in_range else (1 if p.citation_count is not None else 2)
+        return (-rel, citation_preference, _citation_distance(p.citation_count))
 
     eligible.sort(key=_sort_key)
     return eligible, excluded

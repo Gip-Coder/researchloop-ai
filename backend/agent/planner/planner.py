@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import logging
 from backend.agent.core.config import get_settings
-from backend.agent.models.common import DateRange
 from backend.agent.models.search import SearchPlan
 from backend.agent.prompts.planner import PLANNER_SYSTEM_PROMPT, build_planner_prompt
 from backend.providers.llm.base import LLMProvider
@@ -70,18 +69,16 @@ class PlanningAgent:
             keywords=primary_keywords,
             search_queries=queries,
             preferred_sources=list(settings.preferred_sources),
-            min_publication_year=settings.default_min_publication_year,
+            min_publication_year=None,
             min_citations=settings.default_min_citations,
             allow_unknown_citations=settings.default_allow_unknown_citations,
-            date_range=DateRange(start_year=settings.default_min_publication_year) if settings.default_min_publication_year else None,
+            date_range=None,
             inclusion_criteria=[
                 "Directly investigates the core research question",
                 "Presents empirical or theoretical methodologies",
-            ] + ([f"Published in {settings.default_min_publication_year} or later"] if settings.default_min_publication_year else [])
-            + ([f"Minimum citation count: {settings.default_min_citations}"] if settings.default_min_citations else []),
+            ] + ([f"Minimum citation count: {settings.default_min_citations}"] if settings.default_min_citations else []),
             exclusion_criteria=[
                 "Non-scholarly or superficial opinion articles",
                 "Completely unrelated domain applications",
-            ] + ([f"Published prior to {settings.default_min_publication_year} unless foundational"] if settings.default_min_publication_year else [])
-            + ([f"Known citation count strictly below {settings.default_min_citations}"] if settings.default_min_citations else [])
+            ] + ([f"Known citation count strictly below {settings.default_min_citations}"] if settings.default_min_citations else [])
         )

@@ -43,43 +43,69 @@ class RelevanceFilter:
         semaphore = asyncio.Semaphore(max_concurrent)
         settings = get_settings()
 
-        min_year = plan.min_publication_year if hasattr(plan, "min_publication_year") and plan.min_publication_year else (
+        min_year = plan.min_publication_year if hasattr(plan, "min_publication_year") and plan.min_publication_year is not None else (
             plan.date_range.start_year if plan.date_range and plan.date_range.start_year else settings.default_min_publication_year
         )
+        min_citations = getattr(plan, "min_citations", None)
+        if min_citations is None:
+            min_citations = settings.default_min_citations
+        allow_unknown_citations = getattr(plan, "allow_unknown_citations", settings.default_allow_unknown_citations)
         allow_foundational = getattr(plan, "allow_foundational_exceptions", False)
 
         async def _eval_one(paper: Paper) -> Paper:
-            # 1. Temporal validation & publication year constraints
-            if paper.year is None:
-                p = paper.model_copy()
-                p.is_relevant = False
-                p.relevance_score = 0.1
-                p.relevance_reason = (
-                    f"Publication year missing and record cannot be confidently dated; "
-                    f"excluded under {min_year}+ publication year constraint."
-                )
-                return p
-
-            if paper.year < min_year:
-                if allow_foundational and paper.is_foundational_exception:
-                    # Explicit foundational exception permitted
-                    pass
-                else:
+            # 1. Temporal validation & publication year constraints (applied only if min_year is set)
+            if min_year is not None:
+                if paper.year is None:
                     p = paper.model_copy()
                     p.is_relevant = False
-                    p.relevance_score = 0.05
+                    p.relevance_score = 0.1
                     p.relevance_reason = (
-                        f"Published in {paper.year}, prior to start_year {min_year} "
-                        f"(minimum required publication year {min_year})."
+                        f"Publication year missing and record cannot be confidently dated; "
+                        f"excluded under {min_year}+ publication year constraint."
                     )
                     return p
 
-            if plan.date_range and plan.date_range.end_year and paper.year > plan.date_range.end_year:
+                if paper.year < min_year:
+                    if allow_foundational and paper.is_foundational_exception:
+                        # Explicit foundational exception permitted
+                        pass
+                    else:
+                        p = paper.model_copy()
+                        p.is_relevant = False
+                        p.relevance_score = 0.05
+                        p.relevance_reason = (
+                            f"Published in {paper.year}, prior to start_year {min_year} "
+                            f"(minimum required publication year {min_year})."
+                        )
+                        return p
+
+            if plan.date_range and plan.date_range.end_year and paper.year and paper.year > plan.date_range.end_year:
                 p = paper.model_copy()
                 p.is_relevant = False
                 p.relevance_score = 0.05
                 p.relevance_reason = f"Published in {paper.year}, after end_year {plan.date_range.end_year}."
                 return p
+
+            # 2. Minimum citations constraint
+            if min_citations is not None and min_citations > 0:
+                if paper.citation_count is not None and paper.citation_count < min_citations:
+                    p = paper.model_copy()
+                    p.is_relevant = False
+                    p.relevance_score = 0.05
+                    p.relevance_reason = (
+                        f"Citation count ({paper.citation_count}) is below minimum requirement "
+                        f"of {min_citations} citations."
+                    )
+                    return p
+                elif paper.citation_count is None and not allow_unknown_citations:
+                    p = paper.model_copy()
+                    p.is_relevant = False
+                    p.relevance_score = 0.05
+                    p.relevance_reason = (
+                        f"Citation count is unknown and allow_unknown_citations is disabled "
+                        f"(minimum required: {min_citations})."
+                    )
+                    return p
 
             # 2. LLM Relevance Evaluation
             prompt = build_relevance_prompt(

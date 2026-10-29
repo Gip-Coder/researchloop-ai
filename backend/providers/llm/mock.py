@@ -155,17 +155,17 @@ class MockLLMProvider(LLMProvider):
                 ],
                 "preferred_sources": preferred,
                 "min_publication_year": settings.default_min_publication_year,
-                "date_range": {"start_year": settings.default_min_publication_year, "end_year": 2026},
+                "date_range": {"start_year": settings.default_min_publication_year, "end_year": 2026} if settings.default_min_publication_year else None,
                 "inclusion_criteria": [
                     "Focuses directly on retrieval-augmented generation (RAG) and language models",
                     "Investigates factual accuracy, hallucination reduction, or knowledge grounding",
                     "Presents empirical architecture, benchmark evaluations, or theoretical analysis",
-                    f"Published in {settings.default_min_publication_year} or later"
+                    f"Published in {settings.default_min_publication_year} or later" if settings.default_min_publication_year else "Peer-reviewed literature"
                 ],
                 "exclusion_criteria": [
                     "Studies solely focused on standalone database retrieval without generative models",
                     "Non-scholarly blog posts or position pieces lacking empirical basis",
-                    f"Published prior to {settings.default_min_publication_year}"
+                    f"Published prior to {settings.default_min_publication_year}" if settings.default_min_publication_year else "Non-scholarly or unverified sources"
                 ]
             }
         return model_cls.model_validate(data)
@@ -310,7 +310,7 @@ class MockLLMProvider(LLMProvider):
                 "Robust resolution of contradictory claims across heterogeneous web sources."
             ],
             "narrative_summary": (
-                f"Synthesized evidence from {len(paper_ids)} eligible peer-reviewed works (2019+). "
+                f"Synthesized evidence from {len(paper_ids)} eligible peer-reviewed works . "
                 "Retrieval-Augmented Generation (RAG) has emerged as a leading paradigm for reducing "
                 "parametric hallucinations and enforcing factual grounding in Large Language Models. By decomposing "
                 "knowledge access into non-parametric retrieval and generative reasoning, RAG systems ground outputs "

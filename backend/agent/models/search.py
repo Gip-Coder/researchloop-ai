@@ -30,12 +30,20 @@ class SearchPlan(BaseModel):
         description="Target academic sources (defaults to arxiv, crossref)"
     )
     date_range: DateRange | None = Field(
-        default_factory=lambda: DateRange(start_year=get_settings().default_min_publication_year),
+        default_factory=lambda: DateRange(start_year=get_settings().default_min_publication_year) if get_settings().default_min_publication_year else None,
         description="Temporal boundaries for paper retrieval"
     )
-    min_publication_year: int = Field(
+    min_publication_year: int | None = Field(
         default_factory=lambda: get_settings().default_min_publication_year,
-        description="Minimum publication year for eligible literature (default 2019)"
+        description="Minimum publication year for eligible literature (None for no year restriction)"
+    )
+    min_citations: int = Field(
+        default_factory=lambda: get_settings().default_min_citations,
+        description="Minimum citation count constraint (default 5)"
+    )
+    allow_unknown_citations: bool = Field(
+        default_factory=lambda: get_settings().default_allow_unknown_citations,
+        description="Allow papers with unknown citations (e.g. arXiv preprints)"
     )
     allow_foundational_exceptions: bool = Field(
         default_factory=lambda: get_settings().default_allow_foundational_exceptions,

@@ -342,3 +342,78 @@ async def test_insufficient_evidence_warning():
         assert result.final_review.get("evidence_target_met") is False
         assert result.final_review.get("insufficient_evidence_warning") is not None
         assert "Evidence target" in result.final_review["insufficient_evidence_warning"]
+
+
+# -------------------------------------------------------------------------
+# Phase 2.5: Publication Year Removal & Minimum Citations Constraint Tests
+# -------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_no_publication_year_constraint_by_default():
+    """Verify papers from older years or with missing years are accepted when min_publication_year is None."""
+    llm = MockLLMProvider()
+    rf = RelevanceFilter(llm_provider=llm)
+    plan = SearchPlan(
+        research_question="How does retrieval augmented generation reduce hallucinations?",
+        min_publication_year=None,
+        min_citations=0,
+        keywords=["retrieval", "augmented", "generation"]
+    )
+
+    p_old = Paper(id="p-2005", title="Early Retrieval Research", year=2005, source="crossref", abstract="Early work on retrieval.")
+    p_undated = Paper(id="p-undated", title="Undated Preprint", year=None, source="arxiv", abstract="Preprint on retrieval.")
+
+    relevant, rejected = await rf.filter_papers([p_old, p_undated], plan)
+    rel_ids = [p.id for p in relevant]
+    assert "p-2005" in rel_ids
+    assert "p-undated" in rel_ids
+
+
+@pytest.mark.asyncio
+async def test_minimum_citations_constraint_filtering():
+    """Verify papers below min_citations are rejected, while papers meeting threshold or unknown citations pass."""
+    llm = MockLLMProvider()
+    rf = RelevanceFilter(llm_provider=llm)
+    plan = SearchPlan(
+        research_question="How does retrieval augmented generation reduce hallucinations?",
+        min_publication_year=None,
+        min_citations=5,
+        allow_unknown_citations=True
+    )
+
+    p_high = Paper(id="p-high", title="High Citation Study", year=2021, citation_count=25, source="crossref")
+    p_exact = Paper(id="p-exact", title="Exact Threshold Study", year=2022, citation_count=5, source="crossref")
+    p_low = Paper(id="p-low", title="Low Citation Study", year=2023, citation_count=2, source="crossref")
+    p_arxiv_unknown = Paper(id="p-arxiv", title="Preprint Unknown Citation", year=2024, citation_count=None, source="arxiv")
+
+    relevant, rejected = await rf.filter_papers([p_high, p_exact, p_low, p_arxiv_unknown], plan)
+
+    rel_ids = [p.id for p in relevant]
+    rej_ids = [p.id for p in rejected]
+
+    assert "p-high" in rel_ids
+    assert "p-exact" in rel_ids
+    assert "p-arxiv" in rel_ids
+    assert "p-low" in rej_ids
+
+    low_rej = next(p for p in rejected if p.id == "p-low")
+    assert "below minimum requirement of 5 citations" in low_rej.relevance_reason
+
+
+@pytest.mark.asyncio
+async def test_disallow_unknown_citations_filtering():
+    """Verify that when allow_unknown_citations=False, papers with citation_count=None are rejected."""
+    llm = MockLLMProvider()
+    rf = RelevanceFilter(llm_provider=llm)
+    plan = SearchPlan(
+        research_question="How does retrieval augmented generation reduce hallucinations?",
+        min_publication_year=None,
+        min_citations=5,
+        allow_unknown_citations=False
+    )
+
+    p_arxiv = Paper(id="p-arxiv", title="Preprint Unknown Citation", year=2024, citation_count=None, source="arxiv")
+    relevant, rejected = await rf.filter_papers([p_arxiv], plan)
+    assert len(relevant) == 0
+    assert len(rejected) == 1
+    assert "Citation count is unknown" in rejected[0].relevance_reason

@@ -119,6 +119,8 @@ class ResearchEngine:
             # Ensure search plan inherits configured sources and temporal constraints
             search_plan.preferred_sources = [s for s in cfg.preferred_sources if s in search_plan.preferred_sources] or list(cfg.preferred_sources)
             search_plan.min_publication_year = cfg.min_publication_year
+            search_plan.min_citations = cfg.min_citations
+            search_plan.allow_unknown_citations = cfg.allow_unknown_citations
             search_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
             state.search_plan = search_plan
             await _emit(
@@ -184,6 +186,8 @@ class ResearchEngine:
                     strict_citation_filtering=cfg.strict_citation_filtering,
                     min_year=cfg.min_publication_year,
                     allow_foundational=cfg.allow_foundational_exceptions,
+                    min_citations=cfg.min_citations,
+                    allow_unknown_citations=cfg.allow_unknown_citations,
                 )
                 synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
 
@@ -276,6 +280,8 @@ class ResearchEngine:
                 new_plan = await replanner.replan(state)
                 new_plan.preferred_sources = [s for s in cfg.preferred_sources if s in new_plan.preferred_sources] or list(cfg.preferred_sources)
                 new_plan.min_publication_year = cfg.min_publication_year
+                new_plan.min_citations = cfg.min_citations
+                new_plan.allow_unknown_citations = cfg.allow_unknown_citations
                 new_plan.allow_foundational_exceptions = cfg.allow_foundational_exceptions
                 state.search_plan = new_plan
                 await _emit(
@@ -323,13 +329,22 @@ class ResearchEngine:
             strict_citation_filtering=cfg.strict_citation_filtering,
             min_year=cfg.min_publication_year,
             allow_foundational=cfg.allow_foundational_exceptions,
+            min_citations=cfg.min_citations,
+            allow_unknown_citations=cfg.allow_unknown_citations,
         )
         synthesis_papers = eligible_ranked[:cfg.max_synthesis_papers] if eligible_ranked else state.relevant_papers
 
         insufficient_evidence = len(eligible_ranked) < cfg.min_synthesis_papers
+        qualifiers = []
+        if cfg.min_citations:
+            qualifiers.append(f"min {cfg.min_citations} citations")
+        if cfg.min_publication_year:
+            qualifiers.append(f"published {cfg.min_publication_year}+")
+        qual_str = f" ({', '.join(qualifiers)})" if qualifiers else ""
+
         evidence_warning = (
             f"Evidence target of {cfg.min_synthesis_papers} eligible papers not met: "
-            f"found {len(eligible_ranked)} eligible papers (published {cfg.min_publication_year}+). "
+            f"found {len(eligible_ranked)} eligible papers{qual_str}. "
             f"Synthesizing available {len(synthesis_papers)} papers."
             if insufficient_evidence else None
         )

@@ -24,8 +24,10 @@ def rank_papers_for_synthesis(
     preferred_min_citations: int = 10,
     preferred_max_citations: int = 15,
     strict_citation_filtering: bool = False,
-    min_year: int = 2019,
+    min_year: int | None = None,
     allow_foundational: bool = False,
+    min_citations: int = 0,
+    allow_unknown_citations: bool = True,
 ) -> tuple[list[Paper], list[Paper]]:
     """
     Rank and partition papers for thematic synthesis based on relevance and citation preference.
@@ -55,16 +57,26 @@ def rank_papers_for_synthesis(
     excluded: list[Paper] = []
 
     for paper in papers:
-        # Check year eligibility
-        if paper.year is None:
-            excluded.append(paper)
-            continue
+        # Check year eligibility only if min_year is specified
+        if min_year is not None:
+            if paper.year is None:
+                excluded.append(paper)
+                continue
 
-        if paper.year < min_year:
-            if allow_foundational and paper.is_foundational_exception:
-                # Valid foundational exception
-                pass
-            else:
+            if paper.year < min_year:
+                if allow_foundational and paper.is_foundational_exception:
+                    # Valid foundational exception
+                    pass
+                else:
+                    excluded.append(paper)
+                    continue
+
+        # Check minimum citations constraint
+        if min_citations is not None and min_citations > 0:
+            if paper.citation_count is not None and paper.citation_count < min_citations:
+                excluded.append(paper)
+                continue
+            if paper.citation_count is None and not allow_unknown_citations:
                 excluded.append(paper)
                 continue
 

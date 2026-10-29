@@ -39,9 +39,17 @@ class ResearchConfig(BaseModel):
     cache_enabled: bool = Field(default=True, description="Enable query and LLM result caching")
 
     # Research Quality & Paper Selection Hyperparameters
-    min_publication_year: int = Field(
+    min_publication_year: int | None = Field(
         default_factory=lambda: get_settings().default_min_publication_year,
-        description="Minimum publication year for eligible literature"
+        description="Minimum publication year for eligible literature (None for no restriction)"
+    )
+    min_citations: int = Field(
+        default_factory=lambda: get_settings().default_min_citations,
+        description="Minimum citation count constraint (default 5)"
+    )
+    allow_unknown_citations: bool = Field(
+        default_factory=lambda: get_settings().default_allow_unknown_citations,
+        description="Allow papers with unknown citations (e.g. arXiv preprints) without rejecting them"
     )
     preferred_min_citations: int = Field(
         default_factory=lambda: get_settings().default_preferred_min_citations,

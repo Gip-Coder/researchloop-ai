@@ -97,8 +97,14 @@ class AgentSettings(BaseModel):
     )
 
     # Research Quality & Paper Selection Hyperparameters
-    default_min_publication_year: int = Field(
-        default_factory=lambda: int(os.getenv("MIN_PUBLICATION_YEAR", "2019"))
+    default_min_publication_year: int | None = Field(
+        default_factory=lambda: int(os.getenv("MIN_PUBLICATION_YEAR")) if os.getenv("MIN_PUBLICATION_YEAR") and os.getenv("MIN_PUBLICATION_YEAR").strip().lower() not in ("none", "0", "") else None
+    )
+    default_min_citations: int = Field(
+        default_factory=lambda: int(os.getenv("MIN_CITATIONS", "5"))
+    )
+    default_allow_unknown_citations: bool = Field(
+        default_factory=lambda: os.getenv("ALLOW_UNKNOWN_CITATIONS", "true").lower() in ("1", "true", "yes")
     )
     default_preferred_min_citations: int = Field(
         default_factory=lambda: int(os.getenv("PREFERRED_MIN_CITATIONS", "10"))

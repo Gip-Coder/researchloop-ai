@@ -28,3 +28,7 @@ dist/
 # Frontend dependencies
 frontend/node_modules/
 
+
+# IDE settings
+.vscode/
+.idea/
